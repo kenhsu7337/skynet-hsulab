@@ -1868,18 +1868,40 @@ function initVolcano() {
   if (activeExpId) { sel.value = activeExpId; populateVolcCpds(); }
 }
 
-function populateVolcCpds() {
+async function populateVolcCpds() {
   var expId = document.getElementById('ve').value;
   var exp = experiments.filter(function(e) { return e.id === expId; })[0];
   var vc = document.getElementById('vc');
+  vc.innerHTML = '<option value="">Loading\u2026</option>';
+  if (!exp) { vc.innerHTML = '<option value="">Select compound\u2026</option>'; return; }
+
+  // Get compounds — derive from protein tmt keys if not stored directly
+  var cpds = (exp.compounds && exp.compounds.length) ? exp.compounds : [];
+
+  if (!cpds.length) {
+    // Try protein cache first
+    var cached = _proteinCache[expId];
+    if (cached && cached.length) {
+      cpds = Object.keys(cached[0].tmt || {});
+    } else {
+      // Load proteins to get compound list
+      exp = await ensureProteins(expId);
+      if (exp && exp.proteins && exp.proteins.length) {
+        cpds = Object.keys(exp.proteins[0].tmt || {});
+      }
+    }
+    // Cache the derived compounds on the experiment object
+    if (cpds.length) exp.compounds = cpds;
+  }
+
   vc.innerHTML = '';
-  if (exp) {
-    for (var c = 0; c < exp.compounds.length; c++) {
-      vc.innerHTML += '<option value="' + exp.compounds[c] + '">' + exp.compounds[c] + ' vs Vehicle</option>';
+  if (cpds.length) {
+    for (var c = 0; c < cpds.length; c++) {
+      vc.innerHTML += '<option value="' + cpds[c] + '">' + cpds[c] + ' vs Vehicle</option>';
     }
     drawVolcano();
   } else {
-    vc.innerHTML = '<option value="">Select compound\u2026</option>';
+    vc.innerHTML = '<option value="">No compounds found</option>';
   }
 }
 
@@ -1983,7 +2005,7 @@ function initHeatmap() {
   if (experiments.length) drawHeatmap();
 }
 
-function drawHeatmap() {
+async function drawHeatmap() {
   var n = parseInt(document.getElementById('hn').value) || 40;
   var probe = document.getElementById('hpr').value;
   var sortBy = document.getElementById('hso').value;
@@ -1994,9 +2016,19 @@ function drawHeatmap() {
     return;
   }
 
+  // Ensure proteins loaded and derive compounds for each experiment
+  for (var i = 0; i < filtExps.length; i++) {
+    if (!filtExps[i].proteins || !filtExps[i].proteins.length) {
+      filtExps[i] = await ensureProteins(filtExps[i].id) || filtExps[i];
+    }
+    if (!filtExps[i].compounds || !filtExps[i].compounds.length) {
+      var prots = filtExps[i].proteins || _proteinCache[filtExps[i].id] || [];
+      if (prots.length) filtExps[i].compounds = Object.keys(prots[0].tmt || {});
+    }
+  }
   var cols = [];
   for (var i = 0; i < filtExps.length; i++) {
-    for (var c = 0; c < filtExps[i].compounds.length; c++) {
+    for (var c = 0; c < (filtExps[i].compounds||[]).length; c++) {
       cols.push({exp: filtExps[i], cpd: filtExps[i].compounds[c]});
     }
   }
