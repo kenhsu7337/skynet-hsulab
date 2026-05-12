@@ -2091,6 +2091,7 @@ async function sendEmail() {
       + (det.length ? '\n' + det.join(' | ') : '')
       + '\n\nMissing fields:\n' + mis.map(function(f){return '  • '+f;}).join('\n')
       + '\n\nLog in at: https://skynet-hsulab.vercel.app\n\nThanks!\nKen Hsu Lab';
+    emailjs.init({publicKey: EMAILJS_KEY});
     var result = await emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, {
       to_email: u.email,
       subject:  'Skynet: Missing metadata — ' + (exp.filename || exp.name),
