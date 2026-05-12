@@ -63,7 +63,7 @@ td{padding:9px 12px;font-size:13px;border-bottom:1px solid #F8F7F3;vertical-alig
 
 <div id="wlc" style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg)">
   <div class="card" style="padding:2.5rem;width:380px;border-radius:16px">
-    <div style="font-size:24px;font-weight:800;margin-bottom:2px">&#x1F9EC; Skynet</div>
+    <div style="font-size:24px;font-weight:800;margin-bottom:2px">&#x1F9EC; Skynet <span style="font-size:9px;opacity:.4">v8</span></div>
     <div style="font-size:13px;color:var(--mu);margin-bottom:2rem">Hsu Lab &middot; UT Austin</div>
     <div id="sb-mode-pw">
       <div style="margin-bottom:12px">
@@ -98,7 +98,7 @@ td{padding:9px 12px;font-size:13px;border-bottom:1px solid #F8F7F3;vertical-alig
 <div id="app" style="display:none">
   <div class="nav">
     <div style="display:flex;align-items:center">
-      <div style="font-weight:700;font-size:15px;padding:0 16px 0 0;color:var(--br);white-space:nowrap">&#x1F9EC; Skynet</div>
+      <div style="font-weight:700;font-size:15px;padding:0 16px 0 0;color:var(--br);white-space:nowrap">&#x1F9EC; Skynet <span style="font-size:9px;opacity:.4">v8</span></div>
       <button class="tab on"  id="tab-dash">Dashboard</button>
       <button class="tab"     id="tab-up">&#x2B06; Upload</button>
       <button class="tab"     id="tab-qry">&#x1F50D; Query</button>
@@ -607,8 +607,16 @@ function populateDropdowns() {
 
 function launch() {
   loadXLSX(); loadChart(null);
-  supa = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+  supa = window.supabase.createClient(SUPA_URL, SUPA_KEY, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+      storage: window.localStorage
+    }
+  });
   supa.auth.onAuthStateChange(function(event, session) {
+    console.log('Auth event:', event, session ? session.user.email : 'no session');
     _session = session;
     if (session) {
       // If arriving from an invite link, prompt to set a password
@@ -635,7 +643,20 @@ function launch() {
       experiments=[]; _proteinCache={};
     }
   });
-  supa.auth.getSession();
+  // Explicitly check for existing session on load
+  supa.auth.getSession().then(function(result) {
+    if (result.data && result.data.session && !_session) {
+      console.log('Session restored from getSession():', result.data.session.user.email);
+      _session = result.data.session;
+      document.getElementById('wlc').style.display='none';
+      document.getElementById('app').style.display='block';
+      document.getElementById('nav-user').innerHTML = result.data.session.user.email.replace('@utexas.edu','')
+        + (ADMIN_EMAILS.indexOf(result.data.session.user.email)>=0
+          ? ' <span style="font-size:10px;background:#4A3FA8;color:#fff;padding:1px 6px;border-radius:8px">admin</span>' : '');
+      populateDropdowns();
+      loadExperimentsFromDB();
+    }
+  });
 }
 
 // ── Parsing ───────────────────────────────────────────────────────────────────
