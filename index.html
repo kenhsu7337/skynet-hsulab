@@ -107,7 +107,7 @@ td{padding:9px 12px;font-size:13px;border-bottom:1px solid #F8F7F3;vertical-alig
       <button class="tab"     id="tab-usrs">&#x1F465; Users</button>
     </div>
     <button id="resetBtn" style="font-size:12px;color:var(--fa);background:none;border:none;cursor:pointer;flex-shrink:0;padding:0 4px">&#x27F3; Reset</button>
-  <div id="nav-user-area" style="display:flex;align-items:center;gap:8px;margin-left:8px;flex-shrink:0;border-left:1px solid var(--bo);padding-left:12px"><span id="nav-user" style="font-size:12px;color:var(--mu);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span><button onclick="sbLogout()" style="font-size:11px;background:none;border:1px solid var(--bo);border-radius:6px;padding:3px 9px;cursor:pointer;color:var(--mu)">Sign out</button></div>
+  <div id="nav-user-area" style="display:flex;align-items:center;gap:8px;margin-left:8px;flex-shrink:0;border-left:1px solid var(--bo);padding-left:12px"><span id="db-count-badge" style="font-size:10px;color:var(--fa);margin-right:4px"></span><span id="nav-user" style="font-size:12px;color:var(--mu);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span><button onclick="sbLogout()" style="font-size:11px;background:none;border:1px solid var(--bo);border-radius:6px;padding:3px 9px;cursor:pointer;color:var(--mu)">Sign out</button></div>
   </div>
   <div id="xb" class="wi" style="display:none;border-radius:0;border-left:none;border-right:none;border-top:none;text-align:center">&#x23F3; Loading Excel parser &mdash; requires internet connection&hellip;</div>
 
@@ -392,6 +392,9 @@ async function loadExperimentsFromDB() {
   });
 
   console.log('Loaded', experiments.length, 'experiments from DB');
+  // Show count badge in nav
+  var badge = document.getElementById('db-count-badge');
+  if (badge) badge.textContent = experiments.length + ' exp' + (experiments.length!==1?'s':'');
   renderDash();
 }
 
@@ -939,23 +942,39 @@ async function doUpload() {
 
       // ── Insert proteins in batches of 500 ──
       var prots = sheet.proteins;
-      var BATCH = 500;
+      var BATCH = 100;  // smaller batches for Supabase free tier
       for (var bi = 0; bi < prots.length; bi += BATCH) {
         var pct = Math.round(((bi+BATCH)/prots.length)*100);
-        saveBtn.textContent = 'Saving... ' + Math.min(pct,100) + '%'
+        saveBtn.textContent = 'Saving ' + Math.min(bi+BATCH, prots.length) + '/' + prots.length + ' proteins'
           + (multiSheet ? ' (sheet '+(si+1)+'/'+parsedFile.length+')' : '');
         var batch = prots.slice(bi, bi+BATCH).map(function(p) {
           return {
             experiment_id: expRow.id,
-            uid:p.uid, name:p.name, org:p.org, gene:p.gene,
-            mw:p.mw, pi:p.pi, cov:p.cov, pep:p.pep, psm:p.psm,
-            cat:p.cat, mods:p.mods, pep_seq:p.pep_seq, motif:p.motif,
-            tmt:p.tmt||null, min_r:p.minR, ctrl:p.ctrl,
-            bp:p.bp, cc:p.cc, mf:p.mf
+            uid:   p.uid   || null,
+            name:  p.name  || null,
+            org:   p.org   || null,
+            gene:  p.gene  || null,
+            mw:    (p.mw   != null) ? p.mw   : null,
+            pi:    (p.pi   != null) ? p.pi   : null,
+            cov:   (p.cov  != null) ? p.cov  : null,
+            pep:   (p.pep  != null) ? p.pep  : null,
+            psm:   (p.psm  != null) ? p.psm  : null,
+            cat:   p.cat   || null,
+            mods:  p.mods  || null,
+            pep_seq: p.pep_seq || null,
+            motif: p.motif || null,
+            tmt:   (p.tmt && Object.keys(p.tmt).length) ? p.tmt : null,
+            min_r: (p.minR != null) ? p.minR : null,
+            ctrl:  p.ctrl  || null,
+            bp:    p.bp    || null,
+            cc:    p.cc    || null,
+            mf:    p.mf    || null
           };
         });
         var pR = await supa.from('proteins').insert(batch);
-        if (pR.error) throw pR.error;
+        if (pR.error) {
+          throw new Error('Protein batch ' + (bi/BATCH+1) + ' failed: ' + pR.error.message);
+        }
       }
 
       // ── Add to local array ──
