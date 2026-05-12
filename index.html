@@ -343,38 +343,55 @@ async function sbLogout() {
 
 // Load experiment list from DB (metadata only — proteins loaded lazily)
 async function loadExperimentsFromDB() {
-  // Try summary view first; fall back to experiments table if permissions not set
-  var r = await supa.from('experiment_summary').select('*').order('created_at',{ascending:false});
-  if (r.error) {
-    console.warn('Summary view failed, trying experiments table:', r.error.message);
-    r = await supa.from('experiments').select('*').order('created_at',{ascending:false});
-  }
+  // Query experiments table directly — avoids view dependency issues
+  var r = await supa.from('experiments').select('*').order('created_at', {ascending: false});
+
   if (r.error) {
     console.error('Load error:', r.error);
-    // Try a simple ping to distinguish auth vs permissions error
-    var ping = await supa.from('experiments').select('count').limit(1);
-    var msg = ping.error
-      ? 'Permission denied — run skynet_fix.sql in Supabase SQL Editor. Error: ' + ping.error.message
-      : 'Could not load view — run skynet_fix.sql in Supabase SQL Editor. Error: ' + r.error.message;
     var pg = document.getElementById('page-dash');
-    if (pg) pg.insertAdjacentHTML('afterbegin','<div class="er" style="margin:1rem">'
-      + msg + '</div>');
+    if (pg) pg.insertAdjacentHTML('afterbegin',
+      '<div class="er" style="margin:1rem">Could not load experiments: ' + r.error.message
+      + '<br><small>Run skynet_fix.sql in Supabase and refresh.</small></div>');
     return;
   }
-  experiments = (r.data||[]).map(function(e) {
-    return { id:e.id, ts:new Date(e.created_at).getTime(),
-      name:e.filename||'Experiment', filename:e.filename||'',
-      source_file:e.source_file||'', sheet_name:e.sheet_name||'',
-      type:e.type||'tmt', is_shared:e.is_shared, user_id:e.user_id,
-      submitted_by:e.submitted_by||'', submitter_email:'',
-      lcms:e.lcms||'', bio_rep:e.bio_rep||'', probe_type:e.probe_type||'',
-      probe_label:e.probe_label||'', compound:e.compound||'',
-      treat_conc:e.treat_conc||'', treat_time:e.treat_time||'',
-      treat_type:e.treat_type||'', treat_media:e.treat_media||'',
-      lysis:e.lysis||'', cell_line:e.cell_line||'', instrument:e.instrument||'',
-      compounds:Array.isArray(e.compounds)?e.compounds:(e.compounds?[e.compounds]:[]), proteins:[],
-      _proteinCount:e.protein_count||0, _engagedCount:e.engaged_count||0 };
+
+  if (!r.data || !r.data.length) {
+    console.log('No experiments found in DB for this user.');
+  }
+
+  experiments = (r.data || []).map(function(e) {
+    return {
+      id:             e.id,
+      ts:             new Date(e.created_at).getTime(),
+      name:           e.filename || 'Experiment',
+      filename:       e.filename || '',
+      source_file:    e.source_file || '',
+      sheet_name:     e.sheet_name || '',
+      type:           e.type || 'tmt',
+      is_shared:      e.is_shared,
+      user_id:        e.user_id,
+      submitted_by:   e.submitted_by || '',
+      submitter_email:e.submitter_email || '',
+      lcms:           e.lcms || '',
+      bio_rep:        e.bio_rep || '',
+      probe_type:     e.probe_type || '',
+      probe_label:    e.probe_label || '',
+      compound:       e.compound || '',
+      compounds:      Array.isArray(e.compounds) ? e.compounds : [],
+      treat_conc:     e.treat_conc || '',
+      treat_time:     e.treat_time || '',
+      treat_type:     e.treat_type || '',
+      treat_media:    e.treat_media || '',
+      lysis:          e.lysis || '',
+      cell_line:      e.cell_line || '',
+      instrument:     e.instrument || '',
+      proteins:       [],
+      _proteinCount:  0,
+      _engagedCount:  0
+    };
   });
+
+  console.log('Loaded', experiments.length, 'experiments from DB');
   renderDash();
 }
 
