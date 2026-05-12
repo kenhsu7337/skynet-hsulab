@@ -976,6 +976,7 @@ async function doUpload() {
         instrument:     instr || ''
       };
 
+      alert('STEP 1: About to insert experiment\nFile: ' + expFilename + '\nUser: ' + _session.user.email + '\nSheets: ' + parsedFile.length);
       console.log('Inserting experiment:', expFilename, 'user:', _session.user.email);
       var expR = await supa.from('experiments').insert(expMeta).select('id,filename').single();
       if (expR.error) {
@@ -984,6 +985,7 @@ async function doUpload() {
         return;
       }
       var expRow = expR.data;
+      alert('STEP 2: Experiment INSERT succeeded\nID: ' + expRow.id + '\nProteins to save: ' + prots.length);
       console.log('Experiment saved:', expRow.id);
 
       // Insert proteins in batches
@@ -1016,6 +1018,7 @@ async function doUpload() {
           return;
         }
       }
+      alert('STEP 3: All proteins saved! (' + prots.length + ' proteins)\nUpload complete.');
       console.log('Proteins saved:', prots.length);
 
       experiments.unshift({
