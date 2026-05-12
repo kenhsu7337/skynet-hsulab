@@ -927,22 +927,25 @@ function updateUserEmail() {
 async function doUpload() {
   if (!supa)    { alert('DB not connected. Refresh the page.'); return; }
   if (!_session){ alert('Not logged in. Please sign in again.'); return; }
-  if (!parsedFile || !parsedFile.length) { alert('No file loaded — drop a file first.'); return; }
+  if (!parsedFile) { alert('No file loaded — drop a file first.'); return; }
+  // Normalize: handle both old single-object format and new array format
+  var pf = Array.isArray(parsedFile) ? parsedFile
+         : (parsedFile.proteins ? [parsedFile] : null);
+  if (!pf || !pf.length) { alert('No valid data found in file. Please re-drop the file.'); return; }
+  parsedFile = pf;  // ensure it's always an array going forward
 
   var saveBtn = document.getElementById('us');
   var fmEl    = document.getElementById('fm');
   if (saveBtn) saveBtn.disabled = true;
   if (fmEl)   fmEl.innerHTML = '';
 
-  var _dbg = 'start';
   try {
-    _dbg='userIdx'; var userIdx = document.getElementById('uu') ? document.getElementById('uu').value : '';
-    _dbg='user';    var user    = userIdx !== '' ? LAB_USERS[parseInt(userIdx)] : null;
-    _dbg='pb/pc';   var pb = gv('upb'), pc = gv('upc'), pt = gv('upt'), px = gv('upx');
-    _dbg='pl';      var pl = pb + (pc||pt||px ? ' ('+ [pc,pt,px].filter(Boolean).join(', ') +')' : '');
-    _dbg='filename';var baseFilename = gv('ufn');
-    _dbg='parsedFile check'; alert('parsedFile type: '+typeof parsedFile+', isArray: '+Array.isArray(parsedFile)+', length: '+(parsedFile?parsedFile.length:'null'));
-    _dbg='multiSheet';var multiSheet   = parsedFile.length > 1;
+    var userIdx = document.getElementById('uu') ? document.getElementById('uu').value : '';
+    var user    = userIdx !== '' ? LAB_USERS[parseInt(userIdx)] : null;
+    var pb = gv('upb'), pc = gv('upc'), pt = gv('upt'), px = gv('upx');
+    var pl = pb + (pc||pt||px ? ' ('+ [pc,pt,px].filter(Boolean).join(', ') +')' : '');
+    var baseFilename = gv('ufn');
+    var multiSheet   = parsedFile.length > 1;
     var lastExpId    = null;
     var instr = (document.getElementById('uin') && document.getElementById('uin').value === 'Other')
       ? (document.getElementById('uin-other') ? document.getElementById('uin-other').value.trim() : '')
@@ -978,7 +981,6 @@ async function doUpload() {
         instrument:     instr || ''
       };
 
-      alert('STEP 1: About to insert experiment\nFile: ' + expFilename + '\nUser: ' + _session.user.email + '\nSheets: ' + parsedFile.length);
       console.log('Inserting experiment:', expFilename, 'user:', _session.user.email);
       var expR = await supa.from('experiments').insert(expMeta).select('id,filename').single();
       if (expR.error) {
@@ -987,7 +989,6 @@ async function doUpload() {
         return;
       }
       var expRow = expR.data;
-      alert('STEP 2: Experiment INSERT succeeded\nID: ' + expRow.id + '\nProteins to save: ' + prots.length);
       console.log('Experiment saved:', expRow.id);
 
       // Insert proteins in batches
@@ -1020,7 +1021,6 @@ async function doUpload() {
           return;
         }
       }
-      alert('STEP 3: All proteins saved! (' + prots.length + ' proteins)\nUpload complete.');
       console.log('Proteins saved:', prots.length);
 
       experiments.unshift({
@@ -1049,7 +1049,7 @@ async function doUpload() {
     else { activeExpId = lastExpId; go('exp'); }
 
   } catch(err) {
-    alert('UNEXPECTED ERROR at step: ' + _dbg + '\n' + (err ? err.message : 'unknown') + '\n\nPlease screenshot this.');
+    alert('UNEXPECTED SAVE ERROR:\n' + (err ? err.message : 'unknown') + '\n\nPlease screenshot this.');
     console.error('doUpload error:', err);
     if (saveBtn) { saveBtn.textContent = 'Upload & save'; saveBtn.disabled = false; }
   }
