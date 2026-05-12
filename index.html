@@ -345,12 +345,20 @@ async function sbLogout() {
 
 // Load experiment list from DB (metadata only — proteins loaded lazily)
 async function loadExperimentsFromDB() {
-  if (!supa || !_session) {
-    console.log('loadExperimentsFromDB: no supa or session');
-    return;
+  function dbDiag(msg) {
+    // Write visible diagnostic to page — alerts are blocked on auto-load
+    var el = document.getElementById('db-diag');
+    if (el) el.innerHTML = '<div style="background:#FEF3C7;border:1px solid #F59E0B;padding:8px 12px;font-size:11px;margin:8px">' + msg + '</div>';
+    console.log('DB DIAG:', msg);
   }
+
+  dbDiag('loadExperimentsFromDB called. supa=' + (supa?'yes':'NO') + ' session=' + (_session?_session.user.email:'NULL'));
+
+  if (!supa || !_session) return;
+
+  dbDiag('Querying experiments table...');
   var r = await supa.from('experiments').select('*').order('created_at', {ascending: false});
-  alert('DB query returned: ' + (r.data ? r.data.length : 0) + ' rows\nError: ' + (r.error ? r.error.message : 'none') + '\nUser: ' + _session.user.email);
+  dbDiag('Query done. rows=' + (r.data?r.data.length:0) + ' error=' + (r.error?r.error.message:'none'));
 
   if (r.error) {
     console.error('Load error:', r.error);
