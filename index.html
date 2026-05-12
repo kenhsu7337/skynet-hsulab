@@ -343,13 +343,25 @@ async function sbLogout() {
 
 // Load experiment list from DB (metadata only — proteins loaded lazily)
 async function loadExperimentsFromDB() {
+  // Try summary view first; fall back to experiments table if permissions not set
   var r = await supa.from('experiment_summary').select('*').order('created_at',{ascending:false});
-  if (r.error) { console.error('Load error:',r.error); return; }
+  if (r.error) {
+    console.warn('Summary view failed, trying experiments table:', r.error.message);
+    r = await supa.from('experiments').select('*').order('created_at',{ascending:false});
+  }
+  if (r.error) {
+    console.error('Load error:', r.error);
+    var pg = document.getElementById('page-dash');
+    if (pg) pg.insertAdjacentHTML('afterbegin','<div class="er" style="margin:1rem">'
+      +'Could not load experiments: '+r.error.message
+      +'<br><small>Run the permissions SQL in Supabase and refresh.</small></div>');
+    return;
+  }
   experiments = (r.data||[]).map(function(e) {
     return { id:e.id, ts:new Date(e.created_at).getTime(),
       name:e.filename||'Experiment', filename:e.filename||'',
       source_file:e.source_file||'', sheet_name:e.sheet_name||'',
-      type:e.type||'tmt', is_shared:e.is_shared,
+      type:e.type||'tmt', is_shared:e.is_shared, user_id:e.user_id,
       submitted_by:e.submitted_by||'', submitter_email:'',
       lcms:e.lcms||'', bio_rep:e.bio_rep||'', probe_type:e.probe_type||'',
       probe_label:e.probe_label||'', compound:e.compound||'',
