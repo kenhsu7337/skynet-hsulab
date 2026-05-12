@@ -345,8 +345,12 @@ async function sbLogout() {
 
 // Load experiment list from DB (metadata only — proteins loaded lazily)
 async function loadExperimentsFromDB() {
-  // Query experiments table directly — avoids view dependency issues
+  if (!supa || !_session) {
+    console.log('loadExperimentsFromDB: no supa or session');
+    return;
+  }
   var r = await supa.from('experiments').select('*').order('created_at', {ascending: false});
+  alert('DB query returned: ' + (r.data ? r.data.length : 0) + ' rows\nError: ' + (r.error ? r.error.message : 'none') + '\nUser: ' + _session.user.email);
 
   if (r.error) {
     console.error('Load error:', r.error);
