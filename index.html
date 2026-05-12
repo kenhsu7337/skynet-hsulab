@@ -58,6 +58,7 @@ td{padding:9px 12px;font-size:13px;border-bottom:1px solid #F8F7F3;vertical-alig
 
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 </head>
 <body>
 
@@ -287,7 +288,7 @@ td{padding:9px 12px;font-size:13px;border-bottom:1px solid #F8F7F3;vertical-alig
     <div id="empr" style="display:none;background:#F8F7F3;border-radius:8px;padding:1rem;font-size:12px;color:var(--mu);margin-bottom:1.25rem;white-space:pre-wrap;line-height:1.6;font-family:monospace;max-height:180px;overflow-y:auto"></div>
     <div style="display:flex;gap:8px;justify-content:flex-end">
       <button class="btn bsm" id="copyEmailBtn">&#x1F4CB; Copy text</button>
-      <button class="btn bp bsm" id="openEmailBtn">&#x1F4E7; Open in mail app</button>
+      <button class="btn bp bsm" id="openEmailBtn">&#x1F4E7; Send email</button>
     </div>
   </div>
 </div>
@@ -607,6 +608,9 @@ function populateDropdowns() {
 
 function launch() {
   loadXLSX(); loadChart(null);
+  // Initialize EmailJS
+  if (window.emailjs) emailjs.init({publicKey: EMAILJS_KEY});
+
   supa = window.supabase.createClient(SUPA_URL, SUPA_KEY, {
     auth: {
       persistSession: true,
@@ -1064,6 +1068,12 @@ function expCSV(expId) {
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 
 var ADMIN_EMAILS = ['ken.hsu@austin.utexas.edu'];
+
+// EmailJS configuration
+var EMAILJS_SERVICE  = 'service_okop5ps';
+var EMAILJS_TEMPLATE = 'template_n0wts6d';
+var EMAILJS_KEY      = 'kIpANTI5lzDaQlapZ';
+
 
 function isAdmin() {
   return _session && ADMIN_EMAILS.indexOf(_session.user.email) >= 0;
@@ -2051,22 +2061,64 @@ function updateEmailPreview() {
   var ui = document.getElementById('ems').value;
   var u = ui !== '' ? LAB_USERS[parseInt(ui)] : null;
   var fn = u ? u.name.split(' ')[0] : 'there';
-  var body = 'Hi ' + fn + ',\n\nThe following metadata fields are missing for your experiment:\n\nFile: ' + (exp.filename || exp.name) + '\n\nMissing fields:\n' + mis.map(function(f) { return '  \u2022 ' + f; }).join('\n') + '\n\nPlease reply with the missing information.\n\nThanks!\nSkynet';
+  var det = [];
+  if (exp.probe_type) det.push('Probe: ' + exp.probe_type);
+  if (exp.cell_line)  det.push('Cell line: ' + exp.cell_line);
+  var body = 'Hi ' + fn + ',';
+  body += '\n\nCould you fill in the missing metadata for your experiment on Skynet?';
+  body += '\n\nFile: ' + (exp.filename || exp.name);
+  if (det.length) body += '\n' + det.join(' | ');
+  body += '\n\nMissing fields:\n' + mis.map(function(f){return '  \u2022 '+f;}).join('\n');
+  body += '\n\nLog in at: https://skynet-hsulab.vercel.app\n\nThanks!\nKen Hsu Lab';
   document.getElementById('empr').style.display = 'block';
   document.getElementById('empr').textContent = body;
 }
 
-function sendEmail() {
+async function sendEmail() {
   var exp = experiments.filter(function(e) { return e.id === emailExpId; })[0];
   if (!exp) return;
   var mis = getMissing(exp);
   var ui = document.getElementById('ems').value;
   var u = ui !== '' ? LAB_USERS[parseInt(ui)] : null;
-  var to = u ? u.email : '';
-  var fn = u ? u.name.split(' ')[0] : 'there';
-  var sub = encodeURIComponent('Skynet: Missing metadata \u2014 ' + (exp.filename || exp.name));
-  var body = encodeURIComponent('Hi ' + fn + ',\n\nMissing fields:\n' + mis.map(function(f) { return '  \u2022 ' + f; }).join('\n') + '\n\nFile: ' + (exp.filename || exp.name) + '\n\nThanks!\nSkynet');
-  window.open('mailto:' + to + '?subject=' + sub + '&body=' + body);
+  if (!u) { alert('Please select a lab member to send to.'); return; }
+
+  var btn = document.getElementById('openEmailBtn');
+  btn.disabled = true; btn.textContent = 'Sending...';
+
+  var det = [];
+  if (exp.probe_type) det.push('Probe: ' + exp.probe_type);
+  if (exp.cell_line)  det.push('Cell line: ' + exp.cell_line);
+
+  var bodyText = 'Hi ' + u.name.split(' ')[0] + ','
+    + '\n\nCould you fill in the missing metadata for your experiment on Skynet?'
+    + '\n\nFile: ' + (exp.filename || exp.name)
+    + (det.length ? '\n' + det.join(' | ') : '')
+    + '\n\nMissing fields:\n' + mis.map(function(f){return '  • '+f;}).join('\n')
+    + '\n\nLog in at: https://skynet-hsulab.vercel.app\n\nThanks!\nKen Hsu Lab';
+
+  try {
+    emailjs.init({publicKey: EMAILJS_KEY});
+    await emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, {
+      to_email:  u.email,
+      subject:   'Skynet: Missing metadata — ' + (exp.filename || exp.name),
+      message:   bodyText,
+      reply_to:  _session ? _session.user.email : 'ken.hsu@austin.utexas.edu'
+    });
+    btn.textContent = '✓ Sent!';
+    btn.style.background = 'var(--ok, #2E7D32)';
+    setTimeout(function() {
+      btn.textContent = '὎7 Send email';
+      btn.disabled = false;
+      btn.style.background = '';
+      closeEmail();
+    }, 2000);
+  } catch(err) {
+    console.error('EmailJS error:', err);
+    btn.textContent = '὎7 Send email';
+    btn.disabled = false;
+    alert('Email failed: ' + (err.text || err.message || JSON.stringify(err))
+      + '\n\nCheck EmailJS dashboard for details.');
+  }
 }
 
 function copyEmailText() {
