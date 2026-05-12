@@ -2066,7 +2066,7 @@ function updateEmailPreview() {
   body += '\n\nFile: ' + (exp.filename || exp.name);
   if (det.length) body += '\n' + det.join(' | ');
   body += '\n\nMissing fields:\n' + mis.map(function(f){return '  \u2022 '+f;}).join('\n');
-  body += '\n\nLog in at: https://skynet-hsulab.vercel.app\n\nThanks!\nKen Hsu Lab';
+  body += '\n\nLog in at: https://skynet-hsulab.vercel.app\n\nThanks!\nHsu Lab';
   document.getElementById('empr').style.display = 'block';
   document.getElementById('empr').textContent = body;
 }
@@ -2090,7 +2090,7 @@ async function sendEmail() {
       + '\n\nFile: ' + (exp.filename || exp.name)
       + (det.length ? '\n' + det.join(' | ') : '')
       + '\n\nMissing fields:\n' + mis.map(function(f){return '  • '+f;}).join('\n')
-      + '\n\nLog in at: https://skynet-hsulab.vercel.app\n\nThanks!\nKen Hsu Lab';
+      + '\n\nLog in at: https://skynet-hsulab.vercel.app\n\nThanks!\nHsu Lab';
     emailjs.init({publicKey: EMAILJS_KEY});
     var result = await emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, {
       to_email: u.email,
