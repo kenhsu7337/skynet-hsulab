@@ -108,7 +108,7 @@ td{padding:9px 12px;font-size:13px;border-bottom:1px solid #F8F7F3;vertical-alig
       <button class="tab"     id="tab-usrs">&#x1F465; Users</button>
     </div>
     <button id="resetBtn" style="font-size:12px;color:var(--fa);background:none;border:none;cursor:pointer;flex-shrink:0;padding:0 4px">&#x27F3; Reset</button>
-  <div id="nav-user-area" style="display:flex;align-items:center;gap:8px;margin-left:8px;flex-shrink:0;border-left:1px solid var(--bo);padding-left:12px"><span id="db-count-badge" style="font-size:10px;color:var(--fa);margin-right:4px"></span><span id="nav-user" style="font-size:12px;color:var(--mu);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span><button onclick="sbLogout()" style="font-size:11px;background:none;border:1px solid var(--bo);border-radius:6px;padding:3px 9px;cursor:pointer;color:var(--mu)">Sign out</button></div>
+  <div id="nav-user-area" style="display:flex;align-items:center;gap:8px;margin-left:8px;flex-shrink:0;border-left:1px solid var(--bo);padding-left:12px"><button onclick="openFeedback()" style="background:none;border:1px solid var(--bo);border-radius:6px;padding:3px 10px;font-size:12px;color:var(--mu);cursor:pointer;margin-right:8px">&#x2753; Help / Feedback</button><span id="db-count-badge" style="font-size:10px;color:var(--fa);margin-right:4px"></span><span id="nav-user" style="font-size:12px;color:var(--mu);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span><button onclick="sbLogout()" style="font-size:11px;background:none;border:1px solid var(--bo);border-radius:6px;padding:3px 9px;cursor:pointer;color:var(--mu)">Sign out</button></div>
   </div>
   <div id="xb" class="wi" style="display:none;border-radius:0;border-left:none;border-right:none;border-top:none;text-align:center">&#x23F3; Loading Excel parser &mdash; requires internet connection&hellip;</div>
 
@@ -1124,6 +1124,54 @@ async function testDB() {
   await supa.from('experiments').delete().eq('id', ins.data.id);
   out.innerHTML += '<div style="color:green;font-weight:600">DB connection fully working!</div>';
   btn.disabled=false; btn.textContent='Test DB';
+}
+
+
+function openFeedback() {
+  document.getElementById('fb-subject').value = '';
+  document.getElementById('fb-message').value = '';
+  var btn = document.getElementById('fb-send-btn');
+  if (btn) { btn.textContent = '\u1F4E7 Send'; btn.disabled = false; btn.style.background = ''; }
+  document.getElementById('fbmod').style.display = 'flex';
+  setTimeout(function() { document.getElementById('fb-subject').focus(); }, 50);
+}
+
+function closeFeedback() {
+  document.getElementById('fbmod').style.display = 'none';
+}
+
+async function sendFeedback() {
+  var subject = document.getElementById('fb-subject').value.trim();
+  var message = document.getElementById('fb-message').value.trim();
+  if (!subject) { alert('Please enter a subject.'); return; }
+  if (!message) { alert('Please enter a message.'); return; }
+
+  var btn = document.getElementById('fb-send-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Sending\u2026'; }
+
+  try {
+    if (typeof emailjs === 'undefined') throw new Error('Email service not loaded — try a hard refresh.');
+    emailjs.init({publicKey: EMAILJS_KEY});
+
+    var senderEmail = _session ? _session.user.email : 'unknown';
+    var bodyText = 'From: ' + senderEmail
+      + '\n\n' + message
+      + '\n\n---\nSent via Skynet Help & Feedback';
+
+    await emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, {
+      to_email: 'ken.hsu@austin.utexas.edu',
+      subject:  'Skynet Feedback: ' + subject,
+      message:  bodyText,
+      reply_to: senderEmail
+    });
+
+    if (btn) { btn.textContent = '\u2713 Sent!'; btn.style.background = '#2E7D32'; btn.style.color = '#fff'; }
+    setTimeout(function() { closeFeedback(); }, 2000);
+  } catch(err) {
+    console.error('Feedback send error:', err);
+    if (btn) { btn.textContent = '\u1F4E7 Send'; btn.style.background = ''; btn.disabled = false; }
+    alert('Could not send: ' + (err.text || err.message || JSON.stringify(err)));
+  }
 }
 
 function renderDash() {
@@ -2190,5 +2238,30 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 </script>
+
+<!-- Feedback / Help Modal -->
+<div id="fbmod" class="mo-wrap" style="display:none" onclick="if(event.target===this)closeFeedback()">
+  <div class="mo" style="max-width:480px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+      <div>
+        <div style="font-weight:700;font-size:16px">&#x2753; Help &amp; Feedback</div>
+        <div style="font-size:12px;color:var(--mu)">Send a message to the Skynet team</div>
+      </div>
+      <button onclick="closeFeedback()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--mu)">&times;</button>
+    </div>
+    <div style="margin-bottom:.75rem">
+      <label style="font-size:12px;font-weight:600;color:var(--mu);display:block;margin-bottom:4px">Subject</label>
+      <input id="fb-subject" type="text" class="fc" placeholder="e.g. Bug report, Feature request, Question…" style="width:100%">
+    </div>
+    <div style="margin-bottom:1rem">
+      <label style="font-size:12px;font-weight:600;color:var(--mu);display:block;margin-bottom:4px">Message</label>
+      <textarea id="fb-message" class="fc" rows="5" placeholder="Describe your issue or feedback…" style="width:100%;resize:vertical"></textarea>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:8px">
+      <button class="btn bsm" onclick="closeFeedback()">Cancel</button>
+      <button class="btn bp bsm" id="fb-send-btn" onclick="sendFeedback()">&#x1F4E7; Send</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
