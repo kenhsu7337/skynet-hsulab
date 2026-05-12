@@ -585,7 +585,10 @@ function launch() {
       }
       document.getElementById('wlc').style.display='none';
       document.getElementById('app').style.display='block';
-      document.getElementById('nav-user').textContent=session.user.email.replace('@utexas.edu','');
+      var uname = session.user.email.replace('@utexas.edu','');
+      var adminTag = ADMIN_EMAILS.indexOf(session.user.email)>=0
+        ? ' <span style="font-size:10px;background:#4A3FA8;color:#fff;padding:1px 6px;border-radius:8px">admin</span>' : '';
+      document.getElementById('nav-user').innerHTML = uname + adminTag;
       populateDropdowns();
       loadExperimentsFromDB();
     } else {
@@ -991,6 +994,25 @@ function expCSV(expId) {
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 
+function isAdmin() {
+  return _session && ADMIN_EMAILS.indexOf(_session.user.email) >= 0;
+}
+
+function isOwner(exp) {
+  return _session && exp && (exp.user_id === _session.user.id || isAdmin());
+}
+
+async function toggleShare(expId) {
+  var exp = experiments.filter(function(e){return e.id===expId;})[0];
+  if (!exp || !isOwner(exp)) return;
+  var newVal = !exp.is_shared;
+  var r = await supa.from('experiments').update({is_shared:newVal}).eq('id',expId);
+  if (r.error) { alert('Update failed: '+r.error.message); return; }
+  exp.is_shared = newVal;
+  renderExpDetail();
+  renderExpList();
+}
+
 function renderDash() {
   var uids = {};
   var cpdsSet = {};
@@ -1013,7 +1035,7 @@ function renderDash() {
   document.getElementById('d2').textContent = Object.keys(cpdsSet).length;
   document.getElementById('d3').textContent = hits;
 
-  var inc = experiments.filter(function(e) { return getMissing(e).length > 0; });
+  var inc = experiments.filter(function(e) { return getMissing(e).length > 0 && isOwner(e); });
   var att = document.getElementById('d-attn');
   if (inc.length) {
     var attnHtml = '<div style="background:#FFFBEB;border:1.5px solid #FDE68A;border-radius:10px;padding:1rem 1.25rem;margin-bottom:1.25rem">'
@@ -1182,7 +1204,7 @@ function renderExpList() {
     return;
   }
 
-  var inc = experiments.filter(function(e) { return getMissing(e).length > 0; });
+  var inc = experiments.filter(function(e) { return getMissing(e).length > 0 && isOwner(e); });
   var html = '';
   if (inc.length) {
     html += '<div style="background:#FFFBEB;border:1.5px solid #FDE68A;border-radius:10px;padding:1rem 1.25rem;margin-bottom:12px">'
@@ -1200,6 +1222,7 @@ function renderExpList() {
 
   var rev = experiments.slice().reverse();
   var lastSrc = null;
+  var lastUser = null;
   for (var i = 0; i < rev.length; i++) {
     var e = rev[i];
     // File grouping: insert a header row when source file changes
@@ -1213,6 +1236,16 @@ function renderExpList() {
       }
       lastSrc = curSrc;
     }
+    // Group by uploader when not already grouped by source file
+    if (!curSrc) {
+      var curUser = e.submitted_by || '—';
+      if (curUser !== lastUser) {
+        html += '<tr><td colspan="9" style="padding:5px 12px 2px;font-size:10px;font-weight:700;'
+          + 'color:var(--fa);background:var(--sf);border-top:2px solid var(--bo);letter-spacing:.04em">'
+          + '&#x1F9D1;&#x200D;&#x1F52C; ' + curUser + '</td></tr>';
+        lastUser = curUser;
+      }
+    } else { lastUser = null; }
     var mis = getMissing(e);
     var statusHtml = mis.length
       ? '<button class="bem" onclick="openEmail(\'' + e.id + '\')">\ud83d\udce7 ' + mis.length + ' missing</button>'
@@ -1273,7 +1306,7 @@ async function renderExpDetail() {
     + (exp.submitted_by ? '<span>by ' + exp.submitted_by + '</span>' : '')
     + '</div></div>'
     + '<div style="display:flex;gap:8px;flex-shrink:0">'
-    + '<button class="bcsv" onclick="expCSV(\'' + exp.id + '\')">\u2b07 Export CSV</button>'
+'<button class="bcsv" onclick="expCSV(\'' + exp.id + '\')">\u2b07 Export CSV</button>'
     + '<button class="btn bsm" onclick="activeExpId=\'' + exp.id + '\';go(\'anlys\')">\ud83c\udf0b Volcano</button>'
     + '<button class="btn bsm bd2" onclick="if(confirm(\'Delete?\'))deleteExp(\'' + exp.id + '\')">\xd7</button>'
     + '</div></div>'
