@@ -345,22 +345,8 @@ async function sbLogout() {
 
 // Load experiment list from DB (metadata only — proteins loaded lazily)
 async function loadExperimentsFromDB() {
-  function dbDiag(msg) {
-    console.log('DB DIAG:', msg);
-    document.title = 'Skynet | ' + msg.slice(0,60);
-    var el = document.getElementById('db-diag');
-    if (el) el.innerHTML = '<div style="background:#FEF3C7;border:1px solid #F59E0B;padding:8px 12px;font-size:11px;margin:8px;border-radius:6px">' + msg + '</div>';
-    var nu = document.getElementById('nav-user');
-    if (nu) nu.title = msg;  // tooltip on hover
-  }
-
-  dbDiag('loadExperimentsFromDB called. supa=' + (supa?'yes':'NO') + ' session=' + (_session?_session.user.email:'NULL'));
-
   if (!supa || !_session) return;
-
-  dbDiag('Querying experiments table...');
   var r = await supa.from('experiments').select('*').order('created_at', {ascending: false});
-  dbDiag('Query done. rows=' + (r.data?r.data.length:0) + ' error=' + (r.error?r.error.message:'none'));
 
   if (r.error) {
     console.error('Load error:', r.error);
@@ -630,7 +616,6 @@ function launch() {
     }
   });
   supa.auth.onAuthStateChange(function(event, session) {
-    try {
     console.log('Auth event:', event, session ? session.user.email : 'no session');
     _session = session;
     if (session) {
@@ -656,12 +641,6 @@ function launch() {
       document.getElementById('wlc').style.display='flex';
       document.getElementById('app').style.display='none';
       experiments=[]; _proteinCache={};
-    }
-    } catch(authErr) {
-      console.error('AUTH CALLBACK ERROR:', authErr);
-      document.title = 'Skynet AUTH ERROR: ' + authErr.message;
-      var db = document.getElementById('db-diag');
-      if (db) db.innerHTML = '<div style="background:red;color:white;padding:8px">AUTH ERROR: ' + authErr.message + '</div>';
     }
   });
   // Explicitly check for existing session on load
@@ -1083,6 +1062,8 @@ function expCSV(expId) {
 }
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
+
+var ADMIN_EMAILS = ['ken.hsu@austin.utexas.edu'];
 
 function isAdmin() {
   return _session && ADMIN_EMAILS.indexOf(_session.user.email) >= 0;
