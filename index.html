@@ -1322,7 +1322,7 @@ async function renderExpDetail() {
     + (exp.submitted_by ? '<span>by ' + exp.submitted_by + '</span>' : '')
     + '</div></div>'
     + '<div style="display:flex;gap:8px;flex-shrink:0">'
-'<button class="bcsv" onclick="expCSV(\'' + exp.id + '\')">\u2b07 Export CSV</button>'
+    + '<button class="bcsv" onclick="expCSV(\'' + exp.id + '\')">\u2b07 Export CSV</button>'
     + '<button class="btn bsm" onclick="activeExpId=\'' + exp.id + '\';go(\'anlys\')">\ud83c\udf0b Volcano</button>'
     + '<button class="btn bsm bd2" onclick="if(confirm(\'Delete?\'))deleteExp(\'' + exp.id + '\')">\xd7</button>'
     + '</div></div>'
