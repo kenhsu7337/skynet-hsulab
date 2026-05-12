@@ -2072,55 +2072,41 @@ function updateEmailPreview() {
 }
 
 async function sendEmail() {
-  var exp = experiments.filter(function(e) { return e.id === emailExpId; })[0];
-  if (!exp) return;
-  var mis = getMissing(exp);
-  var ui = document.getElementById('ems').value;
-  var u = ui !== '' ? LAB_USERS[parseInt(ui)] : null;
-  if (!u) { alert('Please select a lab member to send to.'); return; }
-
-  // Check EmailJS is loaded
-  if (typeof emailjs === 'undefined') {
-    alert('Email service not loaded. Please refresh the page and try again.');
-    return;
-  }
-
   var btn = document.getElementById('openEmailBtn');
-  btn.disabled = true; btn.textContent = 'Sending…';
-
-  var det = [];
-  if (exp.probe_type) det.push('Probe: ' + exp.probe_type);
-  if (exp.cell_line)  det.push('Cell line: ' + exp.cell_line);
-
-  var bodyText = 'Hi ' + u.name.split(' ')[0] + ','
-    + '\n\nCould you fill in the missing metadata for your experiment on Skynet?'
-    + '\n\nFile: ' + (exp.filename || exp.name)
-    + (det.length ? '\n' + det.join(' | ') : '')
-    + '\n\nMissing fields:\n' + mis.map(function(f){return '  • '+f;}).join('\n')
-    + '\n\nLog in at: https://skynet-hsulab.vercel.app\n\nThanks!\nKen Hsu Lab';
-
+  if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
   try {
+    var exp = experiments.filter(function(e) { return e.id === emailExpId; })[0];
+    if (!exp) throw new Error('Experiment not found (id=' + emailExpId + ')');
+    var mis = getMissing(exp);
+    var ui = document.getElementById('ems').value;
+    var u  = ui !== '' ? LAB_USERS[parseInt(ui)] : null;
+    if (!u) throw new Error('No recipient selected — pick a lab member');
+    if (typeof emailjs === 'undefined') throw new Error('EmailJS not loaded — do a hard refresh (Cmd+Shift+R)');
+    var det = [];
+    if (exp.probe_type) det.push('Probe: ' + exp.probe_type);
+    if (exp.cell_line)  det.push('Cell line: ' + exp.cell_line);
+    var bodyText = 'Hi ' + u.name.split(' ')[0] + ','
+      + '\n\nCould you fill in the missing metadata for your experiment on Skynet?'
+      + '\n\nFile: ' + (exp.filename || exp.name)
+      + (det.length ? '\n' + det.join(' | ') : '')
+      + '\n\nMissing fields:\n' + mis.map(function(f){return '  • '+f;}).join('\n')
+      + '\n\nLog in at: https://skynet-hsulab.vercel.app\n\nThanks!\nKen Hsu Lab';
     var result = await emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, {
-      to_email:  u.email,
-      subject:   'Skynet: Missing metadata — ' + (exp.filename || exp.name),
-      message:   bodyText,
-      reply_to:  _session ? _session.user.email : 'ken.hsu@austin.utexas.edu'
+      to_email: u.email,
+      subject:  'Skynet: Missing metadata — ' + (exp.filename || exp.name),
+      message:  bodyText,
+      reply_to: _session ? _session.user.email : 'ken.hsu@austin.utexas.edu'
     });
-    console.log('EmailJS success:', result);
-    btn.textContent = '✓ Sent to ' + u.name.split(' ')[0] + '!';
-    btn.style.background = '#2E7D32'; btn.style.color = '#fff';
+    console.log('EmailJS OK:', result);
+    if (btn) { btn.textContent = '✓ Sent!'; btn.style.background='#2E7D32'; btn.style.color='#fff'; }
     setTimeout(function() {
-      btn.textContent = '὎7 Send email';
-      btn.style.background = ''; btn.style.color = '';
-      btn.disabled = false;
+      if (btn) { btn.textContent='὎7 Send email'; btn.style.background=''; btn.style.color=''; btn.disabled=false; }
       closeEmail();
     }, 2500);
   } catch(err) {
-    console.error('EmailJS error:', err);
-    btn.textContent = '὎7 Send email';
-    btn.style.background = ''; btn.disabled = false;
-    alert('Email failed to send.\nError: ' + (err.text || err.message || JSON.stringify(err))
-      + '\n\nCheck the EmailJS dashboard at emailjs.com for details.');
+    console.error('sendEmail error:', err);
+    if (btn) { btn.textContent='὎7 Send email'; btn.style.background=''; btn.disabled=false; }
+    alert('Email error:\n' + (err.text || err.message || JSON.stringify(err)));
   }
 }
 
