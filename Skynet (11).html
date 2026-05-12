@@ -1,0 +1,1995 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Skynet &mdash; Hsu Lab Chemical Proteomics</title>
+<style>
+
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;color:#1C1B18;background:#F4F3EF;min-height:100vh}
+:root{--br:#4A3FA8;--bl:#EEF0FF;--bd:#2D2878;--s:#fff;--bg:#F4F3EF;--bo:#E4E2DB;--mu:#6B6960;--fa:#A8A59E}
+input,select,textarea,button{font-family:inherit;outline:none;box-sizing:border-box}
+.card{background:var(--s);border:1px solid var(--bo);border-radius:10px}
+.ch{padding:.85rem 1.25rem;border-bottom:1px solid var(--bo);font-weight:600;font-size:14px;display:flex;justify-content:space-between;align-items:center}
+.st{background:var(--bg);border-radius:8px;padding:.9rem 1rem}
+.sl{font-size:12px;color:var(--mu);margin-bottom:3px}.sv{font-size:22px;font-weight:700}.ss{font-size:11px;color:var(--fa);margin-top:2px}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;padding:8px 12px;font-size:12px;color:var(--mu);font-weight:600;border-bottom:1px solid var(--bo);white-space:nowrap}
+td{padding:9px 12px;font-size:13px;border-bottom:1px solid #F8F7F3;vertical-align:middle}
+.hr:hover td{background:#F8F7F3;cursor:pointer}
+.btn{border:1px solid var(--bo);border-radius:6px;padding:7px 16px;font-size:13px;cursor:pointer;background:#fff;color:#1C1B18;display:inline-flex;align-items:center;gap:5px}
+.bp{background:var(--br);color:#fff;border-color:var(--br);font-weight:600}.bp:hover{background:var(--bd)}
+.bp:disabled{opacity:.4;cursor:not-allowed}
+.bsm{padding:4px 11px;font-size:12px}
+.bd2{color:#B91C1C;border-color:#B91C1C}
+.bem{display:inline-flex;align-items:center;gap:5px;background:#FEF3C7;color:#92400E;border:1px solid #FDE68A;border-radius:6px;padding:6px 13px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
+.bem:hover{background:#FDE68A}
+.bcsv{display:inline-flex;align-items:center;gap:5px;background:#E0F5EE;color:#0A5C44;border:1px solid #9FE1CB;border-radius:6px;padding:6px 13px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
+.bcsv:hover{background:#C0EFE0}
+.nav{background:#fff;border-bottom:1px solid var(--bo);padding:0 1rem;display:flex;align-items:center;justify-content:space-between;overflow-x:auto;position:sticky;top:0;z-index:99}
+.tab{font-size:13px;padding:14px 10px;background:none;border:none;border-bottom:2px solid transparent;color:var(--mu);cursor:pointer;white-space:nowrap;flex-shrink:0}
+.tab.on{border-bottom-color:var(--br);color:#1C1B18;font-weight:600}
+.pg{padding:1.5rem;display:none}.pg.on{display:block}
+.fc{width:100%;padding:7px 10px;font-size:13px;border:1px solid var(--bo);border-radius:6px;background:#fff}
+.fc[readonly]{background:var(--bg);color:var(--mu)}
+.lb{font-size:12px;font-weight:600;color:var(--mu);display:block;margin-bottom:4px}
+.ht{font-size:11px;color:var(--fa);margin-top:3px}
+.uid{font-family:monospace;font-size:12px;background:var(--bg);padding:1px 5px;border-radius:4px}
+.drop{border:2px dashed var(--bo);border-radius:9px;padding:2.5rem;text-align:center;cursor:pointer;background:var(--bg);transition:border-color .15s}
+.drop:hover,.drop.drag{border-color:var(--br);background:var(--bl)}
+.ok{background:#EBF5EC;border:1px solid #A7F3D0;border-radius:6px;padding:9px 12px;font-size:13px;color:#2E7D32;margin-top:10px}
+.er{background:#FEF2F2;border:1px solid #FECACA;border-radius:6px;padding:9px 12px;font-size:13px;color:#B91C1C;margin-top:10px}
+.wi{background:#FEF3C7;border:1px solid #FDE68A;border-radius:6px;padding:8px 12px;font-size:13px;color:#B45309}
+.rb{background:#E8E6E0;border-radius:3px;height:7px;width:90px;overflow:hidden;display:inline-block;vertical-align:middle}
+.rf{height:100%;border-radius:3px}
+.probe{font-size:11px;font-weight:600;padding:2px 9px;border-radius:20px;display:inline-block}
+.sc{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--mu);margin:1.25rem 0 .75rem;padding-bottom:.4rem;border-bottom:1px solid var(--bo)}
+.fp{display:inline-block;background:#FEF3C7;border:1px solid #FDE68A;color:#92400E;font-size:12px;padding:3px 10px;border-radius:20px;margin:2px}
+.av{width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;background:var(--bl);color:var(--bd)}
+.hmcell{width:38px;height:32px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;cursor:pointer;border-radius:3px;transition:transform .1s}
+.hmcell:hover{transform:scale(1.15);z-index:10;position:relative}
+.leg{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--mu)}
+.leg-bar{width:120px;height:12px;border-radius:3px;background:linear-gradient(to right,#4A3FA8,#9F99E4,#E8E6FF,#fff,#E8F5E9)}
+.vleg{display:flex;gap:12px;font-size:11px;color:var(--mu);align-items:center;flex-wrap:wrap}
+.vdot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:3px}
+.mo-wrap{display:none;background:rgba(0,0,0,.4);padding:2rem;position:fixed;top:0;left:0;width:100%;height:100%;z-index:200;overflow-y:auto}
+.mo{background:#fff;border-radius:12px;max-width:500px;margin:3rem auto;padding:1.75rem;position:relative}
+
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+<div id="wlc" style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg)">
+  <div class="card" style="padding:2.5rem;width:380px;border-radius:16px">
+    <div style="font-size:24px;font-weight:800;margin-bottom:2px">&#x1F9EC; Skynet</div>
+    <div style="font-size:13px;color:var(--mu);margin-bottom:2rem">Hsu Lab &middot; UT Austin</div>
+    <div id="sb-mode-pw">
+      <div style="margin-bottom:12px">
+        <label class="lb">Email</label>
+        <input id="sb-email" type="email" class="fc" placeholder="name@utexas.edu">
+      </div>
+      <div style="margin-bottom:16px">
+        <label class="lb">Password</label>
+        <input id="sb-pass" type="password" class="fc" placeholder="Password"
+          onkeydown="if(event.key===&apos;Enter&apos;)sbLogin()">
+      </div>
+      <div id="sb-err" style="color:#DC2626;font-size:12px;margin-bottom:10px;display:none"></div>
+      <button id="sb-btn" class="btn bp" style="width:100%;padding:11px;font-size:14px" onclick="sbLogin()">Sign in</button>
+      <div style="text-align:center;margin-top:12px">
+        <button onclick="sbShowMagic()" style="background:none;border:none;color:var(--br);font-size:12px;cursor:pointer;text-decoration:underline">Sign in with magic link instead</button>
+      </div>
+    </div>
+    <div id="sb-mode-magic" style="display:none">
+      <div style="margin-bottom:16px">
+        <label class="lb">Email</label>
+        <input id="sb-magic-email" type="email" class="fc" placeholder="name@utexas.edu">
+      </div>
+      <div id="sb-magic-err" style="color:#DC2626;font-size:12px;margin-bottom:10px;display:none"></div>
+      <div id="sb-magic-ok" style="color:#2E7D32;font-size:12px;margin-bottom:10px;display:none"></div>
+      <button class="btn bp" style="width:100%;padding:11px;font-size:14px" onclick="sbMagicLink()">Send magic link</button>
+      <div style="text-align:center;margin-top:12px">
+        <button onclick="sbShowPw()" style="background:none;border:none;color:var(--br);font-size:12px;cursor:pointer;text-decoration:underline">Back to password sign in</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="app" style="display:none">
+  <div class="nav">
+    <div style="display:flex;align-items:center">
+      <div style="font-weight:700;font-size:15px;padding:0 16px 0 0;color:var(--br);white-space:nowrap">&#x1F9EC; Skynet</div>
+      <button class="tab on"  id="tab-dash">Dashboard</button>
+      <button class="tab"     id="tab-up">&#x2B06; Upload</button>
+      <button class="tab"     id="tab-qry">&#x1F50D; Query</button>
+      <button class="tab"     id="tab-exps">&#x1F9EA; Experiments</button>
+      <button class="tab"     id="tab-anlys">&#x1F4CA; Analysis</button>
+      <button class="tab"     id="tab-usrs">&#x1F465; Users</button>
+    </div>
+    <button id="resetBtn" style="font-size:12px;color:var(--fa);background:none;border:none;cursor:pointer;flex-shrink:0;padding:0 4px">&#x27F3; Reset</button>
+  <div id="nav-user-area" style="display:flex;align-items:center;gap:8px;margin-left:8px;flex-shrink:0;border-left:1px solid var(--bo);padding-left:12px"><span id="nav-user" style="font-size:12px;color:var(--mu);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span><button onclick="sbLogout()" style="font-size:11px;background:none;border:1px solid var(--bo);border-radius:6px;padding:3px 9px;cursor:pointer;color:var(--mu)">Sign out</button></div>
+  </div>
+  <div id="xb" class="wi" style="display:none;border-radius:0;border-left:none;border-right:none;border-top:none;text-align:center">&#x23F3; Loading Excel parser &mdash; requires internet connection&hellip;</div>
+
+  <div id="page-dash" class="pg on">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem">
+      <div><h2 style="font-size:20px;font-weight:700;margin:0 0 2px">Dashboard</h2><p style="font-size:13px;color:var(--mu);margin:0">Hsu Lab &middot; UT Austin</p></div>
+      <button class="btn bp" id="dashUploadBtn">+ Upload experiment</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.25rem">
+      <div class="st"><div class="sl">Experiments</div><div class="sv" id="d0">0</div></div>
+      <div class="st"><div class="sl">Unique proteins</div><div class="sv" id="d1">0</div></div>
+      <div class="st"><div class="sl">Compounds profiled</div><div class="sv" id="d2">0</div></div>
+      <div class="st"><div class="sl">Engagements &le;0.60</div><div class="sv" id="d3" style="color:var(--br)">0</div></div>
+    </div>
+    <div id="d-attn"></div>
+    <div style="display:grid;grid-template-columns:1.6fr 1fr;gap:12px">
+      <div class="card"><div class="ch">Recent experiments <button id="allExpsBtn" style="font-size:12px;color:var(--mu);background:none;border:none;cursor:pointer">All &rarr;</button></div><div id="d-et"></div></div>
+      <div class="card"><div class="ch">Top detected targets</div><div id="d-tp"></div></div>
+    </div>
+  </div>
+
+  <div id="page-up" class="pg" style="max-width:720px;margin:0 auto">
+    <h2 style="font-size:20px;font-weight:700;margin:0 0 4px">Upload experiment</h2>
+    <p style="font-size:13px;color:var(--mu);margin-bottom:1.5rem">Proteome Discoverer .xlsx &middot; complete both steps</p>
+    <div class="card" style="margin-bottom:12px"><div class="ch">Step 1 &mdash; File</div><div style="padding:1.25rem">
+      <div id="dz" class="drop">
+        <div style="font-size:32px;margin-bottom:8px">&#x1F4CA;</div>
+        <p style="font-size:14px;font-weight:600;color:#444;margin:0 0 4px">Drop .xlsx here or click to browse</p>
+        <p style="font-size:12px;color:var(--fa);margin:0">Proteins sheet required</p>
+      </div>
+      <input id="fi" type="file" accept=".xlsx,.xls" style="display:none">
+      <div id="fm"></div>
+      <div id="fnr" style="display:none;margin-top:12px"><label class="lb">File name (auto-filled)</label><input id="ufn" class="fc" readonly></div>
+    </div></div>
+    <div class="card" style="margin-bottom:1.5rem"><div class="ch">Step 2 &mdash; Metadata</div><div style="padding:1.25rem">
+      <div class="sc">0 &middot; Submitted by</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1rem">
+        <div><label class="lb">Lab member</label><select id="uu" class="fc"><option value="">Select&hellip;</option></select></div>
+        <div><label class="lb">Email (auto-filled)</label><input id="ue" class="fc" readonly placeholder="Auto-filled"></div>
+      </div>
+      <div class="sc">1 &middot; LC-MS/MS Experiment</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1rem">
+        <div><label class="lb">Type</label><select id="ul" class="fc"><option value="">Select&hellip;</option><optgroup label="TMT Competition"><option>TMT6plex Insol Enriched</option><option>TMT6plex Insol Unenriched</option><option>TMT6plex Sol Enriched</option><option>TMT6plex Sol Unenriched</option><option>TMT6plex Phosphoproteomics</option></optgroup><optgroup label="Label-free"><option>Label-free Insol Enriched</option><option>Label-free Sol Enriched</option><option>Label-free Unenriched Global Proteomics</option></optgroup></select></div>
+        <div><label class="lb">Bio. replicate</label><input type="text" id="ur" class="fc" placeholder="e.g. 1, 2, or 1-3"></div>
+      </div>
+      <div class="sc">2 &middot; Probe Used</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:1rem">
+        <div><label class="lb">Probe</label><select id="upb" class="fc"><option value="">Select&hellip;</option><option>DBIA</option><option>FP</option><option>SuTEx</option><option>CEP</option><option>PhAzE</option><option>Other</option></select></div>
+        <div><label class="lb">Concentration</label><input id="upc" class="fc" placeholder="500 &micro;M"></div>
+        <div><label class="lb">Time</label><input id="upt" class="fc" placeholder="1 h"></div>
+        <div><label class="lb">Temperature</label><input id="upx" class="fc" placeholder="RT"></div>
+      </div>
+      <div class="sc">3 &middot; Compound Name</div>
+      <div style="margin-bottom:1rem"><label class="lb">Compound name(s)</label><input id="uc" class="fc" placeholder="e.g. KH-001234 (LabMemberInitials-######)"><p class="ht">Format: LabMemberInitials-###### (e.g. KH-001234) &middot; separate multiples with commas</p></div>
+      <div class="sc">4 &middot; Treatment Conditions</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:1rem">
+        <div><label class="lb">Concentration</label><input id="utc" class="fc" placeholder="20 &micro;M"></div>
+        <div><label class="lb">Time</label><input id="utt" class="fc" placeholder="4 h"></div>
+        <div><label class="lb">Setting</label><select id="uty" class="fc"><option value="">Select&hellip;</option><option>in vitro (IV)</option><option>in situ (IS)</option></select></div>
+        <div><label class="lb">Media</label><select id="utm" class="fc"><option value="">Select&hellip;</option><option>Serum-free</option><option>Complete media</option></select></div>
+      </div>
+      <div class="sc">5 &middot; Lysis Conditions</div>
+      <div style="margin-bottom:1rem"><label class="lb">Lysis buffer</label><select id="uly" class="fc"><option value="">Select&hellip;</option><option>1X PBS</option><option>1X PBS + Protease Inhibitors</option><option>1X PBS + Protease and Phosphatase Inhibitors</option></select></div>
+      <div class="sc">6 &middot; Sample &amp; Instrument</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div><label class="lb">Cell line</label><select id="ucl" class="fc"><option value="">Select cell line&hellip;</option><option>A549</option><option>Colo205</option><option>HEK293T</option><option>HeLa</option><option>MDA-MB-231</option><option>THP1</option><option>U2OS</option><option>SH-SY5Y</option><option>Neuro2a</option><option>Raw264.7</option><option>B16F10</option><option>B16F1</option><option>4T1</option><option>MCF-7</option><option selected>SiHa</option><option>22RV1</option><option>PC-3</option><option>NCI-N87</option><option>H1299</option><option>HepG2</option><option>Molm14</option></select></div>
+        <div><label class="lb">Instrument</label><select id="uin" class="fc" onchange="document.getElementById('uin-other').style.display=this.value==='Other'?'block':'none'"><option value="">Select&hellip;</option><option>Exploris</option><option>Eclipse</option><option value="Other">Other&hellip;</option></select><input id="uin-other" class="fc" placeholder="Enter instrument name" style="display:none;margin-top:6px"></div>
+      </div>
+    </div></div>
+    <div style="display:flex;justify-content:flex-end;gap:8px">
+      <button class="btn" id="cancelUpBtn">Cancel</button>
+      <button class="btn bp" id="us" disabled>&#x2B06; Upload &amp; save</button>
+    </div>
+  </div>
+
+  <div id="page-qry" class="pg">
+    <h2 style="font-size:20px;font-weight:700;margin:0 0 4px">Query proteins</h2>
+    <p style="font-size:13px;color:var(--mu);margin-bottom:1rem">Search across all experiments</p>
+    <div style="display:flex;gap:8px;margin-bottom:.75rem;flex-wrap:wrap">
+      <input id="qt" placeholder="UniProt ID, gene, or protein name&hellip;" style="flex:1;min-width:200px;padding:8px 11px;font-size:13px;border:1px solid var(--bo);border-radius:6px">
+      <select id="qp" style="padding:8px 10px;font-size:13px;border:1px solid var(--bo);border-radius:6px;background:#fff;min-width:130px"><option value="">All probes</option></select>
+      <select id="qu2" style="padding:8px 10px;font-size:13px;border:1px solid var(--bo);border-radius:6px;background:#fff;min-width:150px"><option value="">All users</option></select>
+      <select id="qr" style="padding:8px 10px;font-size:13px;border:1px solid var(--bo);border-radius:6px;background:#fff;min-width:140px"><option value="">Any ratio</option><option value="0.5">&le;0.50 strong</option><option value="0.6">&le;0.60 significant</option><option value="0.75">&le;0.75 moderate</option></select>
+    </div>
+    <div id="qc" style="font-size:12px;color:var(--mu);margin-bottom:8px"></div>
+    <div class="card" style="overflow:hidden"><table><thead><tr><th>UniProt</th><th>Gene / Protein</th><th>Category</th><th>MW</th><th>Best ratio</th><th>Bar</th><th>Exps</th><th></th></tr></thead><tbody id="qb"><tr><td colspan="8" style="text-align:center;padding:3rem;color:var(--fa)">No experiments loaded</td></tr></tbody></table></div>
+  </div>
+
+  <div id="page-exps" class="pg">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem">
+      <div><h2 style="font-size:20px;font-weight:700;margin:0 0 2px">Experiments</h2><p style="font-size:13px;color:var(--mu);margin:0">Session only &mdash; cleared on refresh</p></div>
+      <button class="btn bp" id="expsUpBtn">+ Upload new</button>
+    </div>
+    <div id="el"></div>
+  </div>
+
+  <div id="page-exp" class="pg">
+    <button id="backToExpsBtn" style="font-size:12px;color:var(--mu);background:none;border:none;cursor:pointer;margin-bottom:1rem">&larr; Experiments</button>
+    <div id="ed"></div>
+  </div>
+
+  <div id="page-prot" class="pg">
+    <button id="backToQryBtn" style="font-size:12px;color:var(--mu);background:none;border:none;cursor:pointer;margin-bottom:1rem">&larr; Query proteins</button>
+    <div id="pd"></div>
+  </div>
+
+  <div id="page-anlys" class="pg">
+    <h2 style="font-size:20px;font-weight:700;margin:0 0 4px">&#x1F4CA; Analysis</h2>
+    <p style="font-size:13px;color:var(--mu);margin-bottom:1.25rem">Volcano plot and cross-experiment heatmap</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start">
+
+      <!-- LEFT: Volcano -->
+      <div>
+        <div style="font-size:14px;font-weight:600;margin-bottom:10px">&#x1F30B; Volcano plot</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <div><label class="lb">Experiment</label><select id="ve" class="fc" onchange="vpopcp()"><option value="">Select&hellip;</option></select></div>
+          <div><label class="lb">Compound</label><select id="vc" class="fc" onchange="dvp()"><option value="">Select&hellip;</option></select></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:8px;align-items:flex-end">
+          <div style="flex:1"><label class="lb">Ratio threshold</label><select id="vrt" class="fc" onchange="dvp()"><option value="0.6">&le;0.60</option><option value="0.5">&le;0.50</option><option value="0.75">&le;0.75</option></select></div>
+          <button class="btn bp bsm" onclick="dvp()">Draw</button>
+        </div>
+        <div class="vleg" style="margin-bottom:8px;font-size:11px">
+          <span><span class="vdot" style="background:#4A3FA8"></span>Significant</span>
+          <span><span class="vdot" style="background:#9F99E4"></span>Engaged</span>
+          <span><span class="vdot" style="background:#C8C8C8"></span>Not engaged</span>
+          <span style="color:var(--fa);font-style:italic">Click dot = protein detail</span>
+        </div>
+        <div class="card" id="vpc"><div style="padding:2rem;text-align:center;color:var(--fa)">Select experiment and compound</div></div>
+      </div>
+
+      <!-- RIGHT: Heatmap -->
+      <div>
+        <div style="font-size:14px;font-weight:600;margin-bottom:10px">&#x1F321;&#xFE0F; Heatmap</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <div><label class="lb">Top N proteins</label><select id="hn" class="fc"><option value="20">Top 20</option><option value="30">Top 30</option><option value="40" selected>Top 40</option><option value="60">Top 60</option></select></div>
+          <div><label class="lb">Filter by probe</label><select id="hpr" class="fc"><option value="">All probes</option></select></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:8px;align-items:flex-end">
+          <div style="flex:1"><label class="lb">Sort by</label><select id="hso" class="fc"><option value="best">Best ratio first</option><option value="gene">Gene A&ndash;Z</option></select></div>
+          <button class="btn bp bsm" onclick="dhm()">Draw</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <div class="leg" style="font-size:10px"><span>Engaged</span><div class="leg-bar"></div><span>No change</span></div>
+          <span style="font-size:10px;color:var(--fa)">Gray=not detected &middot; click=protein</span>
+        </div>
+        <div id="hmc"><div class="card" style="padding:2rem;text-align:center;color:var(--fa)">Upload experiments then click Draw</div></div>
+      </div>
+
+    </div>
+
+    <!-- Venn diagram for label-free experiments -->
+    <div style="margin-top:20px;border-top:1px solid var(--bo);padding-top:16px">
+      <div style="font-size:14px;font-weight:600;margin-bottom:10px">&#x1F7E2; Label-free Venn diagram</div>
+      <div id="venn-body"><p style="font-size:13px;color:var(--fa)">Upload label-free experiments to enable.</p></div>
+    </div>
+  </div>
+
+  <div id="page-usrs" class="pg">
+    <h2 style="font-size:20px;font-weight:700;margin:0 0 4px">Lab members</h2>
+    <p style="font-size:13px;color:var(--mu);margin-bottom:1.25rem">Hsu Lab &middot; UT Austin &middot; 24 members</p>
+    <div class="card" style="overflow:hidden"><table><thead><tr><th></th><th>Name</th><th>Email</th><th>Experiments</th><th>Last upload</th></tr></thead><tbody id="ut"></tbody></table></div>
+  </div>
+
+  <div style="text-align:center;font-size:11px;color:var(--fa);padding:1.5rem 0 2rem">Skynet &middot; Hsu Lab &middot; Session mode &middot; IP confidential</div>
+</div>
+
+<div id="mob" class="mo-wrap" onclick="if(event.target===this)closeEmail()">
+  <div class="mo">
+    <button id="closeEmailBtn" onclick="closeEmail()" style="position:absolute;top:12px;right:14px;background:none;border:none;cursor:pointer;font-size:18px;color:var(--mu)">&times;</button>
+    <h3 style="font-size:16px;font-weight:700;margin:0 0 4px">&#x1F4E7; Request missing metadata</h3>
+    <p id="emfn" style="font-size:12px;color:var(--mu);margin:0 0 1.25rem;font-family:monospace"></p>
+    <div style="margin-bottom:1rem"><label class="lb">Send to</label><select id="ems" class="fc"><option value="">Select lab member&hellip;</option></select></div>
+    <div id="emml" style="margin-bottom:1rem"></div>
+    <div id="empr" style="display:none;background:#F8F7F3;border-radius:8px;padding:1rem;font-size:12px;color:var(--mu);margin-bottom:1.25rem;white-space:pre-wrap;line-height:1.6;font-family:monospace;max-height:180px;overflow-y:auto"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn bsm" id="copyEmailBtn">&#x1F4CB; Copy text</button>
+      <button class="btn bp bsm" id="openEmailBtn">&#x1F4E7; Open in mail app</button>
+    </div>
+  </div>
+</div>
+
+<script>
+
+// ── Supabase ─────────────────────────────────────────────────────────────────
+var SUPA_URL = 'https://vuervxuckdhajyvnclbg.supabase.co';
+var SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1ZXJ2eHVja2RoYWp5dm5jbGJnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1MzA4NTIsImV4cCI6MjA5NDEwNjg1Mn0.TeZKK8CarQg5Kcn7Szz1V2K_dTs3ZUoSC8s70zIWSK4';
+var supa = null;
+var _session = null;
+var _proteinCache = {};
+
+// Convert DB protein row to app format (min_r -> minR etc.)
+function dbP(p) {
+  return { uid:p.uid, name:p.name||'', org:p.org||'', gene:p.gene||'',
+    mw:p.mw, pi:p.pi, cov:p.cov, pep:p.pep, psm:p.psm,
+    cat:p.cat||'', mods:p.mods||'', pep_seq:p.pep_seq||'', motif:p.motif||'',
+    tmt:p.tmt||{}, minR:p.min_r, ctrl:p.ctrl||'Vehicle',
+    bp:p.bp||'', cc:p.cc||'', mf:p.mf||'' };
+}
+
+// Auth UI helpers
+function sbShowPw() {
+  document.getElementById('sb-mode-pw').style.display='';
+  document.getElementById('sb-mode-magic').style.display='none';
+}
+function sbShowMagic() {
+  document.getElementById('sb-mode-pw').style.display='none';
+  document.getElementById('sb-mode-magic').style.display='';
+}
+async function sbLogin() {
+  var email=document.getElementById('sb-email').value.trim();
+  var pass=document.getElementById('sb-pass').value;
+  var errEl=document.getElementById('sb-err');
+  var btn=document.getElementById('sb-btn');
+  errEl.style.display='none'; btn.textContent='Signing in...';
+  var r = await supa.auth.signInWithPassword({email:email,password:pass});
+  btn.textContent='Sign in';
+  if (r.error) { errEl.textContent=r.error.message; errEl.style.display=''; }
+}
+async function sbMagicLink() {
+  var email=document.getElementById('sb-magic-email').value.trim();
+  var ok=document.getElementById('sb-magic-ok');
+  var err=document.getElementById('sb-magic-err');
+  ok.style.display='none'; err.style.display='none';
+  var r = await supa.auth.signInWithOtp({email:email, options:{emailRedirectTo:window.location.href}});
+  if (r.error) { err.textContent=r.error.message; err.style.display=''; }
+  else { ok.textContent='Magic link sent! Check your inbox.'; ok.style.display=''; }
+}
+async function sbLogout() {
+  await supa.auth.signOut();
+  experiments=[]; _proteinCache={};
+}
+
+// Load experiment list from DB (metadata only — proteins loaded lazily)
+async function loadExperimentsFromDB() {
+  var r = await supa.from('experiment_summary').select('*').order('created_at',{ascending:false});
+  if (r.error) { console.error('Load error:',r.error); return; }
+  experiments = (r.data||[]).map(function(e) {
+    return { id:e.id, ts:new Date(e.created_at).getTime(),
+      name:e.filename||'Experiment', filename:e.filename||'',
+      source_file:e.source_file||'', sheet_name:e.sheet_name||'',
+      type:e.type||'tmt', is_shared:e.is_shared,
+      submitted_by:e.submitted_by||'', submitter_email:'',
+      lcms:e.lcms||'', bio_rep:e.bio_rep||'', probe_type:e.probe_type||'',
+      probe_label:e.probe_label||'', compound:e.compound||'',
+      treat_conc:e.treat_conc||'', treat_time:e.treat_time||'',
+      treat_type:e.treat_type||'', treat_media:e.treat_media||'',
+      lysis:e.lysis||'', cell_line:e.cell_line||'', instrument:e.instrument||'',
+      compounds:e.compounds||[], proteins:[],
+      _proteinCount:e.protein_count||0, _engagedCount:e.engaged_count||0 };
+  });
+  renderDash();
+}
+
+// Fetch proteins for one experiment (cached after first load)
+async function ensureProteins(expId) {
+  var exp = experiments.filter(function(e){return e.id===expId;})[0];
+  if (!exp) return null;
+  if (exp.proteins && exp.proteins.length>0) return exp;
+  if (_proteinCache[expId]) { exp.proteins=_proteinCache[expId]; return exp; }
+  document.getElementById('ed').innerHTML='<div style="text-align:center;padding:3rem;color:var(--fa)">&#x23F3; Loading proteins&hellip;</div>';
+  var r = await supa.from('proteins').select('*').eq('experiment_id',expId);
+  if (r.error||!r.data) {
+    document.getElementById('ed').innerHTML='<p style="color:#DC2626;padding:1rem">Failed to load: '+(r.error?r.error.message:'unknown')+'</p>';
+    return null;
+  }
+  exp.proteins=r.data.map(dbP);
+  _proteinCache[expId]=exp.proteins;
+  return exp;
+}
+
+var LAB_USERS = [
+  {name:"Ken Hsu",email:"ken.hsu@austin.utexas.edu"},
+  {name:"Anting Chen",email:"anting.chen@austin.utexas.edu"},
+  {name:"Emily Ayers",email:"e.ayers@utexas.edu"},
+  {name:"Justin Grams",email:"robert.grams@austin.utexas.edu"},
+  {name:"Sagar Vaidya",email:"sagar.vaidya@austin.utexas.edu"},
+  {name:"Minhaj Shaikh",email:"minhaj.shaikh@austin.utexas.edu"},
+  {name:"Xiaoding Jiang",email:"xiaoding.jiang@austin.utexas.edu"},
+  {name:"Zhihong Li",email:"zhihongli@austin.utexas.edu"},
+  {name:"Gibae Kim",email:"gibae.kim@austin.utexas.edu"},
+  {name:"Zhuoheng Li",email:"zhuoheng.li@austin.utexas.edu"},
+  {name:"Yu Ching (Molly) Wong",email:"yuching.wong@austin.utexas.edu"},
+  {name:"Jinhyuk Kim",email:"jinhyuk.kim@austin.utexas.edu"},
+  {name:"Zhihao Guo",email:"zhihao.guo@austin.utexas.edu"},
+  {name:"Madeleine Ware",email:"mware@utexas.edu"},
+  {name:"Mikayla Horvath",email:"mikaylahorvath@utexas.edu"},
+  {name:"Payton Lowrey",email:"lowreypa@utexas.edu"},
+  {name:"Surya Pravo Mookherjee",email:"suryapravo@utexas.edu"},
+  {name:"Wes Wolfe",email:"weswolfe@utexas.edu"},
+  {name:"Yen-Ting Chen",email:"seuluvyc@utexas.edu"},
+  {name:"John Meinert",email:"johnmeinert@utexas.edu"},
+  {name:"Cameron Muniz",email:"cmuniz@utexas.edu"},
+  {name:"Tobias Jonson",email:"tjonson@utexas.edu"},
+  {name:"John Thorup",email:"jrt4334@eid.utexas.edu"},
+  {name:"Alyssa Gomez",email:"aag6346@eid.utexas.edu"}
+];
+
+var REQUIRED = [
+  {k:"submitted_by",l:"Submitted by"},
+  {k:"lcms",l:"LC-MS/MS type"},
+  {k:"bio_rep",l:"Biological replicate"},
+  {k:"probe_type",l:"Probe used"},
+  {k:"compound",l:"Compound name"},
+  {k:"treat_type",l:"Treatment setting (IV/IS)"},
+  {k:"lysis",l:"Lysis conditions"},
+  {k:"cell_line",l:"Cell line"},
+  {k:"instrument",l:"Instrument"}
+];
+
+var PS = {
+  DBIA:{bg:"#FEE8E0",fg:"#9A3412"},
+  FP:{bg:"#EEEDFB",fg:"#3B337A"},
+  SuTEx:{bg:"#E0F5EE",fg:"#0A5C44"},
+  CEP:{bg:"#FEF3C7",fg:"#92400E"},
+  PhAzE:{bg:"#FCE7F3",fg:"#9D174D"},
+  Other:{bg:"#F3F2EE",fg:"#44403C"}
+};
+
+var experiments = [];
+var parsedFile = null;
+var activeExpId = null;
+var activeUid = null;
+var xlsxReady = false;
+var chartReady = false;
+var charts = {};
+var emailExpId = null;
+var volcChart = null;
+
+// ── Utilities ─────────────────────────────────────────────────────────────────
+
+function sf(v) { var f = parseFloat(v); return isNaN(f) ? null : f; }
+function si(v) { var i = parseInt(v); return isNaN(i) ? null : i; }
+
+function getMissing(exp) {
+  // Fields only required for TMT competition experiments
+  var tmtOnly = {compound: true, treat_type: true};
+  var out = [];
+  for (var i = 0; i < REQUIRED.length; i++) {
+    var f = REQUIRED[i];
+    if (exp.type === 'labelfree' && tmtOnly[f.k]) continue;
+    if (!exp[f.k] || !exp[f.k].toString().trim()) out.push(f.l);
+  }
+  return out;
+}
+
+function probeBadge(type) {
+  var s = PS[type] || PS.Other;
+  return '<span class="probe" style="background:' + s.bg + ';color:' + s.fg + '">' + (type || '?') + '</span>';
+}
+
+function ratioColor(r) {
+  if (r === null || r === undefined) return {bg:"#F3F2EE", txt:"#888"};
+  if (r <= 0.4) return {bg:"#2D2878", txt:"#fff"};
+  if (r <= 0.5) return {bg:"#4A3FA8", txt:"#fff"};
+  if (r <= 0.6) return {bg:"#7B74D8", txt:"#fff"};
+  if (r <= 0.7) return {bg:"#9F99E4", txt:"#3B337A"};
+  if (r <= 0.8) return {bg:"#C4C0EF", txt:"#3B337A"};
+  if (r <= 0.9) return {bg:"#DDD9F7", txt:"#3B337A"};
+  if (r <= 1.05) return {bg:"#F5F4FD", txt:"#888"};
+  if (r <= 1.2) return {bg:"#E8F5E9", txt:"#2E7D32"};
+  return {bg:"#C8E6C9", txt:"#1B5E20"};
+}
+
+function rcol(r) {
+  return r == null ? "var(--fa)" : r <= 0.5 ? "var(--br)" : r <= 0.65 ? "#7B74D8" : "#AAA";
+}
+
+function rbar(r) {
+  var w = Math.min((r != null ? r : 1) * 100, 100);
+  return '<div class="rb"><div class="rf" style="width:' + w + '%;background:' + rcol(r) + '"></div></div>';
+}
+
+function dateStr(ts) {
+  return new Date(ts).toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
+}
+
+function metaRow(label, value) {
+  if (!value) return '';
+  return '<div style="display:flex;gap:8px;padding:5px 0;border-bottom:1px solid #F8F7F3;font-size:13px">'
+    + '<span style="color:var(--mu);min-width:180px;flex-shrink:0">' + label + '</span>'
+    + '<span>' + value + '</span></div>';
+}
+
+function initials(name) {
+  var parts = name.trim().split(' ');
+  return (parts[0][0] + (parts[parts.length-1][0] || '')).toUpperCase();
+}
+
+function gv(id) {
+  var el = document.getElementById(id);
+  return el ? el.value.trim() : '';
+}
+
+// ── CDN Loading ───────────────────────────────────────────────────────────────
+
+function loadXLSX() {
+  if (xlsxReady || window.XLSX) { xlsxReady = true; return; }
+  var xb = document.getElementById('xb');
+  if (xb) xb.style.display = 'block';
+  var s = document.createElement('script');
+  s.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+  s.onload = function() {
+    xlsxReady = true;
+    var xb2 = document.getElementById('xb');
+    if (xb2) xb2.style.display = 'none';
+  };
+  s.onerror = function() {
+    var xb3 = document.getElementById('xb');
+    if (xb3) xb3.textContent = 'Could not load Excel parser. Check internet connection.';
+  };
+  document.head.appendChild(s);
+}
+
+function loadChart(cb) {
+  if (chartReady || window.Chart) { chartReady = true; if (cb) cb(); return; }
+  var s = document.createElement('script');
+  s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+  s.onload = function() { chartReady = true; if (cb) cb(); };
+  document.head.appendChild(s);
+}
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+
+function go(pageId) {
+  var pages = document.querySelectorAll('.pg');
+  for (var i = 0; i < pages.length; i++) pages[i].classList.remove('on');
+  var tabs = document.querySelectorAll('.tab');
+  for (var i = 0; i < tabs.length; i++) tabs[i].classList.remove('on');
+
+  var pg = document.getElementById('page-' + pageId);
+  if (pg) pg.classList.add('on');
+
+  var tabMap = {dash:'tab-dash', up:'tab-up', qry:'tab-qry', exps:'tab-exps',
+                anlys:'tab-anlys', usrs:'tab-usrs'};
+  var tb = document.getElementById(tabMap[pageId]);
+  if (tb) tb.classList.add('on');
+
+  if (pageId === 'dash') renderDash();
+  if (pageId === 'qry') { renderQueryFilters(); doQuery(); }
+  if (pageId === 'exps') renderExpList();
+  if (pageId === 'exp') renderExpDetail();
+  if (pageId === 'prot') renderProtDetail();
+  if (pageId === 'anlys') { initVolcano(); initHeatmap(); initVenn(); }
+  if (pageId === 'usrs') renderUsers();
+}
+
+// ── Launch ────────────────────────────────────────────────────────────────────
+
+function populateDropdowns() {
+  var opts='<option value="">Select\u2026</option>';
+  for (var i=0;i<LAB_USERS.length;i++) opts+='<option value="'+i+'">'+LAB_USERS[i].name+'</option>';
+  document.getElementById('uu').innerHTML=opts;
+  document.getElementById('ems').innerHTML=opts;
+  var uopts='<option value="">All users</option>';
+  for (var i=0;i<LAB_USERS.length;i++) uopts+='<option value="'+LAB_USERS[i].name+'">'+LAB_USERS[i].name+'</option>';
+  document.getElementById('qu2').innerHTML=uopts;
+}
+
+function launch() {
+  loadXLSX(); loadChart(null);
+  supa = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+  supa.auth.onAuthStateChange(function(event, session) {
+    _session = session;
+    if (session) {
+      document.getElementById('wlc').style.display='none';
+      document.getElementById('app').style.display='block';
+      document.getElementById('nav-user').textContent=session.user.email.replace('@utexas.edu','');
+      populateDropdowns();
+      loadExperimentsFromDB();
+    } else {
+      document.getElementById('wlc').style.display='flex';
+      document.getElementById('app').style.display='none';
+      experiments=[]; _proteinCache={};
+    }
+  });
+  supa.auth.getSession();
+}
+
+// ── Parsing ───────────────────────────────────────────────────────────────────
+
+function parseName(desc) {
+  var s = String(desc || '');
+  var m = s.match(/^(.+?)\s+OS=(.+?)\s+OX=\d+/i);
+  return m ? {name: m[1].trim(), org: m[2].trim()} : {name: s.trim(), org: ''};
+}
+
+function findCol(headers) {
+  var lw = {};
+  for (var i = 0; i < headers.length; i++) lw[String(headers[i]).toLowerCase()] = headers[i];
+  var args = Array.prototype.slice.call(arguments, 1);
+  for (var j = 0; j < args.length; j++) {
+    var f = lw[args[j].toLowerCase()];
+    if (f != null) return f;
+  }
+  return null;
+}
+
+function parseRows(rows) {
+  if (!rows || !rows.length) return {proteins:[], compounds:[], error:'Empty sheet', type:'unknown'};
+  var H = Object.keys(rows[0]);
+
+  // Auto-detect: TMT datasets have "Abundance Ratio:" columns; label-free do not
+  var hasTMT = false;
+  for (var hi = 0; hi < H.length; hi++) {
+    if (/Abundance Ratio:/i.test(H[hi])) { hasTMT = true; break; }
+  }
+  if (!hasTMT) return parseLFRows(rows, H);
+
+  // TMT competition path
+  var cm = {}, ctrl = 'Vehicle';
+  for (var i = 0; i < H.length; i++) {
+    var h = String(H[i]);
+    var m1 = h.match(/Abundance Ratio:\s*\((.+?)\)\s*\/\s*\((.+?)\)/i);
+    var m2 = h.match(/Abundance Ratio Adj\.?\s*P-?Value:\s*\((.+?)\)\s*\/\s*\((.+?)\)/i);
+    var m3 = h.match(/Abundance Ratio Variability \[%\]:\s*\((.+?)\)\s*\/\s*\((.+?)\)/i);
+    if (m1) { ctrl = m1[2]; if (!cm[m1[1]]) cm[m1[1]] = {}; cm[m1[1]].rc = h; }
+    else if (m2) { if (!cm[m2[1]]) cm[m2[1]] = {}; cm[m2[1]].pc = h; }
+    else if (m3) { if (!cm[m3[1]]) cm[m3[1]] = {}; cm[m3[1]].vc = h; }
+  }
+  var cpds = Object.keys(cm);
+  if (!cpds.length) return {proteins:[], compounds:[], error:'No TMT ratio columns found.', type:'unknown'};
+
+  var aC  = findCol(H,'Accession','UniProt ID','Master Protein Accessions');
+  var dC  = findCol(H,'Description','Protein Description','Modifications','Modifications in Master Proteins','Annotated Sequence');
+  var cC  = findCol(H,'Coverage [%]','Coverage');
+  var mC  = findCol(H,'Marked as','Category');
+  var pC  = findCol(H,'# Peptides','Peptides','# PSMs');
+  var sC  = findCol(H,'# PSMs','PSMs');
+  var wC  = findCol(H,'MW [kDa]','MW');
+  var iC  = findCol(H,'calc. pI','pI');
+  var gC  = findCol(H,'Gene Symbol','Gene','Gene Name');
+  var bC  = findCol(H,'Biological Process');
+  var ccC = findCol(H,'Cellular Component');
+  var mfC = findCol(H,'Molecular Function');
+  // Site-level exports (PeptideIsoforms): position and peptide sequence
+  var pepC = findCol(H,'Annotated Sequence','Peptide Sequence');
+  var posC = findCol(H,'Position in Protein','Positions in Master Proteins');
+
+  var proteins = [];
+  for (var r = 0; r < rows.length; r++) {
+    var row = rows[r];
+    // Master Protein Accessions can have multiple separated by '; ' — take the first
+    var acc = String(row[aC] || '').trim().split(/[;,]/)[0].trim();
+    if (!acc || acc.toLowerCase() === 'false') continue;
+    var nd = parseName(row[dC]);
+    // For site-level exports: enrich name with peptide/position if description is a modification string
+    if (!nd.name && pepC && row[pepC]) nd.name = String(row[pepC]).trim();
+    if (posC && row[posC] && nd.name && nd.name.length < 60) {
+      nd.name = nd.name + ' [' + String(row[posC]).split(/[;,]/)[0].trim() + ']';
+    }
+    var tmt = {}, minR = null;
+    for (var c = 0; c < cpds.length; c++) {
+      var cpd = cpds[c];
+      var rv = sf(row[cm[cpd].rc]);
+      tmt[cpd] = { ratio: rv, pval: sf(row[cm[cpd].pc]), vari: sf(row[cm[cpd].vc]) };
+      if (rv != null && rv > 0 && (minR === null || rv < minR)) minR = rv;
+    }
+    proteins.push({
+      uid: acc, name: nd.name, org: nd.org, gene: String(row[gC] || '').trim(),
+      mw: sf(row[wC]), pi: sf(row[iC]), cov: sf(row[cC]),
+      pep: si(row[pC]), psm: si(row[sC]), cat: String(row[mC] || '').trim(),
+      bp: String(row[bC]  || '').trim(), cc: String(row[ccC] || '').trim(),
+      mf: String(row[mfC] || '').trim(), tmt: tmt, minR: minR, ctrl: ctrl
+    });
+  }
+  proteins.sort(function(a,b) { return (a.minR||999) - (b.minR||999); });
+  return {proteins: proteins, compounds: cpds, type: 'tmt'};
+}
+
+function parseLFRows(rows, H) {
+  // ── Handle title rows: PD Sites export has 2 title rows before real headers ──
+  // Detect if the first row's keys look like titles rather than column names
+  var looksLikeData = H.some(function(h) {
+    return /accession|psm|modification|peptide|protein|gene|abundance/i.test(h);
+  });
+
+  if (!looksLikeData) {
+    // Scan first 5 rows to find the real header row (values matching column name patterns)
+    for (var ri = 0; ri < Math.min(5, rows.length); ri++) {
+      var vals = Object.values(rows[ri]);
+      var isHeader = vals.some(function(v) {
+        return /^protein\s+accession|^accession|^#\s*(modified\s+)?psm|^modification\s+name|^peptide\s+seq|^gene\s+symbol/i.test(String(v || ''));
+      });
+      if (isHeader) {
+        // Rebuild rows array using this row's values as the new headers
+        var newH = vals.map(function(v) { return String(v || '').trim(); });
+        var newRows = [];
+        for (var di = ri + 1; di < rows.length; di++) {
+          var oldVals = Object.values(rows[di]);
+          var newRow = {};
+          for (var ci = 0; ci < newH.length; ci++) {
+            if (newH[ci]) newRow[newH[ci]] = oldVals[ci] !== undefined ? oldVals[ci] : '';
+          }
+          newRows.push(newRow);
+        }
+        rows = newRows;
+        H = newH;
+        break;
+      }
+    }
+  }
+
+  // ── Column mapping — handles both Proteins and Sites export formats ──────────
+  var aC  = findCol(H, 'Accession', 'Protein Accession', 'UniProt ID', 'UniProt Accession');
+  var dC  = findCol(H, 'Description', 'Protein Description', 'Protein Name');
+  var gC  = findCol(H, 'Gene Symbol', 'Gene', 'Gene Name');
+  var pC  = findCol(H, '# Peptides', 'Peptides');
+  var sC  = findCol(H, '# PSMs', 'PSMs', '# Modified PSMs', 'Spectral Count', '# Spectral Count');
+  var wC  = findCol(H, 'MW [kDa]', 'MW');
+  var cC  = findCol(H, 'Coverage [%]', 'Coverage');
+  var mC  = findCol(H, 'Marked as', 'Category');
+  // Sites export specific columns
+  var pepC  = findCol(H, 'Peptide Sequence', 'Annotated Sequence', 'Sequence');
+  var modC  = findCol(H, 'Modification Name', 'Modifications', 'Modifications in Master Proteins');
+  var aaC   = findCol(H, 'Target Amino Acid');
+  var posC  = findCol(H, 'Position');
+  var motC  = findCol(H, 'Motif');
+
+  if (!aC) return {proteins:[], compounds:[], error:'No Accession column found. Columns detected: ' + H.slice(0,6).join(', '), type:'labelfree'};
+
+  var proteins = [];
+  for (var r = 0; r < rows.length; r++) {
+    var row = rows[r];
+    var acc = String(row[aC] || '').trim();
+    if (!acc || acc.toLowerCase() === 'false' || acc === '') continue;
+
+    var nd = parseName(row[dC]);
+
+    // Extract gene: prefer explicit Gene Symbol column, fall back to GN= in description
+    var gene = gC ? String(row[gC] || '').trim() : '';
+    if (!gene && row[dC]) {
+      var gm = String(row[dC]).match(/\bGN=(\S+)/);
+      if (gm) gene = gm[1];
+    }
+
+    // Build modification/site label from available columns
+    var mods = '';
+    if (modC && row[modC]) {
+      mods = String(row[modC]).trim();
+      if (aaC && row[aaC] && posC && row[posC]) {
+        mods = row[aaC] + row[posC] + ' (' + mods + ')';
+      }
+    } else if (pepC && row[pepC]) {
+      mods = String(row[pepC]).trim();
+      if (posC && row[posC]) mods += ' [pos ' + row[posC] + ']';
+    } else {
+      mods = String(row[modC] || row[motC] || '').trim();
+    }
+
+    proteins.push({
+      uid:   acc,
+      name:  nd.name,
+      org:   nd.org,
+      gene:  gene,
+      mw:    sf(row[wC]),
+      cov:   sf(row[cC]),
+      pep:   si(row[pC]),
+      psm:   si(row[sC]) || 0,
+      cat:   String(row[mC]  || '').trim(),
+      mods:  mods,
+      // Extra site-level fields (displayed in detail view)
+      pep_seq: pepC ? String(row[pepC] || '').trim() : '',
+      motif:   motC ? String(row[motC] || '').trim() : ''
+    });
+  }
+
+  if (!proteins.length) return {proteins:[], compounds:[], error:'No proteins found in label-free dataset.', type:'labelfree'};
+  proteins.sort(function(a,b) { return (b.psm||0) - (a.psm||0); });
+  return {proteins: proteins, compounds: [], type: 'labelfree'};
+}
+
+
+
+
+function readExcel(file) {
+  return new Promise(function(resolve, reject) {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        var wb = window.XLSX.read(new Uint8Array(e.target.result), {type:'array'});
+        var results = [];
+        for (var i = 0; i < wb.SheetNames.length; i++) {
+          var sn = wb.SheetNames[i];
+          var rows = window.XLSX.utils.sheet_to_json(wb.Sheets[sn], {defval: null});
+          if (!rows || rows.length < 2) continue;  // skip empty / header-only sheets
+          var r = parseRows(rows);
+          if (r.type !== 'unknown' && r.proteins.length > 0) {
+            r.sheetName = sn;
+            results.push(r);
+          }
+        }
+        if (!results.length) { reject(new Error('No valid data found in any sheet. Check that the file has Abundance Ratio columns (TMT) or Accession/PSM columns (label-free).')); return; }
+        resolve(results);
+      } catch(err) { reject(err); }
+    };
+    reader.onerror = reject;
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+// ── Upload ────────────────────────────────────────────────────────────────────
+
+function handleFileDrop(e) { handleFile(e.dataTransfer.files[0]); }
+
+function handleFile(file) {
+  if (!file) return;
+  var msg = document.getElementById('fm');
+  if (!xlsxReady) {
+    msg.innerHTML = '<div class="wi" style="margin-top:10px">Excel parser loading\u2026 wait a moment then try again.</div>';
+    return;
+  }
+  msg.innerHTML = '<div class="wi" style="margin-top:10px">Parsing\u2026</div>';
+  document.getElementById('us').disabled = true;
+  parsedFile = null;
+
+  readExcel(file).then(function(r) {
+    if (r.error) {
+      msg.innerHTML = '<div class="er">' + r.error + '</div>';
+      return;
+    }
+    parsedFile = r;  // r is now an array of sheet results
+    var sheetLines = r.map(function(s) {
+      var tag  = s.type === 'labelfree' ? 'Label-free' : 'TMT';
+      var info = s.type === 'labelfree'
+        ? s.proteins.length + ' proteins'
+        : s.proteins.length + ' proteins \u00b7 ' + s.compounds.length + ' compound' + (s.compounds.length!==1?'s':'');
+      return '<span style="margin-right:8px"><strong>' + s.sheetName + '</strong> ' + tag + ': ' + info + '</span>';
+    }).join('<br>');
+    var sheetWord = r.length === 1 ? '1 sheet' : r.length + ' sheets';
+    msg.innerHTML = '<div class="ok">\u2713 <strong>' + file.name + '</strong> \u2014 ' + sheetWord + '<br><span style="font-size:11px">' + sheetLines + '</span></div>';
+    document.getElementById('ufn').value = file.name;
+    document.getElementById('fnr').style.display = 'block';
+    document.getElementById('us').disabled = false;
+  }).catch(function(err) {
+    msg.innerHTML = '<div class="er">Failed to parse: ' + err.message + '</div>';
+  });
+}
+
+function updateUserEmail() {
+  var idx = document.getElementById('uu').value;
+  document.getElementById('ue').value = idx !== '' ? LAB_USERS[parseInt(idx)].email : '';
+}
+
+async function doUpload() {
+  if (!parsedFile || !parsedFile.length || !_session) return;
+  var userIdx = document.getElementById('uu').value;
+  var user = userIdx !== '' ? LAB_USERS[parseInt(userIdx)] : null;
+  var pb = gv('upb'), pc = gv('upc'), pt = gv('upt'), px = gv('upx');
+  var pl = pb + (pc||pt||px ? ' ('+[pc,pt,px].filter(Boolean).join(', ')+')' : '');
+  var baseFilename = gv('ufn');
+  var multiSheet = parsedFile.length > 1;
+  var lastExpId = null;
+
+  var saveBtn = document.getElementById('us');
+  var fmEl    = document.getElementById('fm');
+  saveBtn.disabled = true; fmEl.innerHTML = '';
+
+  try {
+    for (var si = 0; si < parsedFile.length; si++) {
+      var sheet = parsedFile[si];
+      var expFilename = multiSheet ? baseFilename+' ['+sheet.sheetName+']' : baseFilename;
+      var instr = document.getElementById('uin').value === 'Other'
+        ? document.getElementById('uin-other').value.trim()
+        : document.getElementById('uin').value;
+
+      // ── Insert experiment row ──
+      var expMeta = {
+        user_id: _session.user.id, filename: expFilename,
+        source_file: baseFilename, sheet_name: multiSheet ? sheet.sheetName : '',
+        type: sheet.type||'tmt', compounds: sheet.compounds||[], is_shared: true,
+        submitted_by: user ? user.name : '', submitter_email: user ? user.email : '',
+        lcms: gv('ul'), bio_rep: gv('ur'), probe_type: pb, probe_label: pl,
+        compound: gv('uc'), treat_conc: gv('utc'), treat_time: gv('utt'),
+        treat_type: gv('uty'), treat_media: gv('utm'), lysis: gv('uly'),
+        cell_line: gv('ucl'), instrument: instr
+      };
+      var expR = await supa.from('experiments').insert(expMeta).select().single();
+      if (expR.error) throw expR.error;
+      var expRow = expR.data;
+
+      // ── Insert proteins in batches of 500 ──
+      var prots = sheet.proteins;
+      var BATCH = 500;
+      for (var bi = 0; bi < prots.length; bi += BATCH) {
+        var pct = Math.round(((bi+BATCH)/prots.length)*100);
+        saveBtn.textContent = 'Saving... ' + Math.min(pct,100) + '%'
+          + (multiSheet ? ' (sheet '+(si+1)+'/'+parsedFile.length+')' : '');
+        var batch = prots.slice(bi, bi+BATCH).map(function(p) {
+          return {
+            experiment_id: expRow.id,
+            uid:p.uid, name:p.name, org:p.org, gene:p.gene,
+            mw:p.mw, pi:p.pi, cov:p.cov, pep:p.pep, psm:p.psm,
+            cat:p.cat, mods:p.mods, pep_seq:p.pep_seq, motif:p.motif,
+            tmt:p.tmt||null, min_r:p.minR, ctrl:p.ctrl,
+            bp:p.bp, cc:p.cc, mf:p.mf
+          };
+        });
+        var pR = await supa.from('proteins').insert(batch);
+        if (pR.error) throw pR.error;
+      }
+
+      // ── Add to local array ──
+      var localExp = Object.assign({}, expMeta, {
+        id: expRow.id, ts: new Date(expRow.created_at).getTime(),
+        name: expFilename, proteins: sheet.proteins,
+        _proteinCount: sheet.proteins.length, _engagedCount: 0
+      });
+      _proteinCache[expRow.id] = sheet.proteins;
+      experiments.unshift(localExp);
+      lastExpId = expRow.id;
+    }
+
+    parsedFile = null;
+    saveBtn.textContent = 'Save experiment';
+    saveBtn.disabled = true;
+    ['ufn','upc','upt','upx','uc','utc','utt','ue'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+    ['uu','ul','ur','upb','uty','utm','uly','uin'].forEach(function(id){var el=document.getElementById(id);if(el)el.selectedIndex=0;});
+    var ucl=document.getElementById('ucl'); if(ucl) ucl.value='SiHa';
+    document.getElementById('fnr').style.display='none';
+
+    if (multiSheet) { go('exps'); }
+    else { activeExpId=lastExpId; go('exp'); }
+
+  } catch(err) {
+    saveBtn.textContent = 'Save experiment';
+    saveBtn.disabled = false;
+    fmEl.innerHTML = '<div class="er">Save failed: ' + err.message + '</div>';
+    console.error(err);
+  }
+}
+
+// ── CSV Export ────────────────────────────────────────────────────────────────
+
+function expCSV(expId) {
+  var exp = experiments.filter(function(e) { return e.id === expId; })[0];
+  if (!exp) return;
+  var cpds = exp.compounds;
+  var hdr = ['UniProt ID','Gene Symbol','Protein Name','Category','MW (kDa)','Coverage (%)','# Peptides','# PSMs'];
+  for (var c = 0; c < cpds.length; c++) {
+    hdr.push('Ratio (' + cpds[c] + '/Vehicle)');
+    hdr.push('Adj P-Value (' + cpds[c] + '/Vehicle)');
+    hdr.push('Variability % (' + cpds[c] + '/Vehicle)');
+  }
+  var rows = [hdr.join(',')];
+  for (var p = 0; p < exp.proteins.length; p++) {
+    var pr = exp.proteins[p];
+    var row = [
+      pr.uid, pr.gene,
+      '"' + (pr.name || '').replace(/"/g, '""') + '"',
+      '"' + (pr.cat  || '').replace(/"/g, '""') + '"',
+      pr.mw != null ? pr.mw : '',
+      pr.cov != null ? pr.cov : '',
+      pr.pep != null ? pr.pep : '',
+      pr.psm != null ? pr.psm : ''
+    ];
+    for (var c = 0; c < cpds.length; c++) {
+      var td = pr.tmt[cpds[c]] || {};
+      row.push(td.ratio != null ? td.ratio : '');
+      row.push(td.pval  != null ? td.pval  : '');
+      row.push(td.vari  != null ? td.vari  : '');
+    }
+    rows.push(row.join(','));
+  }
+  var blob = new Blob([rows.join('\n')], {type:'text/csv'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = (exp.filename || exp.name).replace(/\.xlsx?$/i,'') + '_Skynet.csv';
+  a.click();
+}
+
+// ── Dashboard ─────────────────────────────────────────────────────────────────
+
+function renderDash() {
+  var uids = {};
+  var cpdsSet = {};
+  var hits = 0;
+  for (var i = 0; i < experiments.length; i++) {
+    var e = experiments[i];
+    // If proteins are loaded use them; otherwise use DB summary counts
+    if (e.proteins && e.proteins.length > 0) {
+      for (var j = 0; j < e.proteins.length; j++) {
+        uids[e.proteins[j].uid] = 1;
+        if (e.proteins[j].minR != null && e.proteins[j].minR <= 0.6) hits++;
+      }
+    } else {
+      hits += e._engagedCount || 0;
+    }
+    for (var c = 0; c < (e.compounds||[]).length; c++) cpdsSet[e.compounds[c]] = 1;
+  }
+  document.getElementById('d0').textContent = experiments.length;
+  document.getElementById('d1').textContent = Object.keys(uids).length;
+  document.getElementById('d2').textContent = Object.keys(cpdsSet).length;
+  document.getElementById('d3').textContent = hits;
+
+  var inc = experiments.filter(function(e) { return getMissing(e).length > 0; });
+  var att = document.getElementById('d-attn');
+  if (inc.length) {
+    var attnHtml = '<div style="background:#FFFBEB;border:1.5px solid #FDE68A;border-radius:10px;padding:1rem 1.25rem;margin-bottom:1.25rem">'
+      + '<div style="font-weight:600;font-size:14px;color:#92400E;margin-bottom:10px">\u26a0\ufe0f '
+      + inc.length + ' experiment' + (inc.length !== 1 ? 's' : '') + ' need missing metadata</div>';
+    for (var i = 0; i < inc.length; i++) {
+      var ei = inc[i];
+      var mis = getMissing(ei);
+      attnHtml += '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-top:1px solid #FDE68A">'
+        + '<div><div style="font-size:13px;font-weight:500;font-family:monospace">' + ei.filename + '</div>'
+        + '<div style="font-size:11px;color:#B45309">' + mis.join(' \u00b7 ') + '</div></div>'
+        + '<button class="bem" onclick="openEmail(\'' + ei.id + '\')">\ud83d\udce7 Request info</button></div>';
+    }
+    attnHtml += '</div>';
+    att.innerHTML = attnHtml;
+  } else if (experiments.length) {
+    att.innerHTML = '<div class="ok" style="margin-bottom:1.25rem">\u2713 All experiments have complete metadata</div>';
+  } else {
+    att.innerHTML = '';
+  }
+
+  var et = document.getElementById('d-et');
+  if (!experiments.length) {
+    et.innerHTML = '<div style="padding:3rem;text-align:center;color:var(--fa)">'
+      + '<div style="font-size:28px;margin-bottom:8px">\u2b06</div>'
+      + '<p style="font-size:13px;margin:0 0 12px">No experiments yet</p>'
+      + '<button class="btn bp bsm" onclick="go(\'up\')">Upload first dataset</button></div>';
+    document.getElementById('d-tp').innerHTML = '<p style="padding:1.5rem;color:var(--fa);font-size:13px;text-align:center">No data yet</p>';
+    return;
+  }
+
+  var recentExps = experiments.slice().reverse().slice(0, 6);
+  var etHtml = '<table><thead><tr><th>File</th><th>Probe</th><th>By</th><th>Proteins</th><th></th></tr></thead><tbody>';
+  for (var i = 0; i < recentExps.length; i++) {
+    var re = recentExps[i];
+    var mis = getMissing(re);
+    etHtml += '<tr class="hr" onclick="activeExpId=\'' + re.id + '\';go(\'exp\')">'
+      + '<td style="font-weight:500;font-family:monospace;font-size:12px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (re.filename || re.name) + '</td>'
+      + '<td>' + probeBadge(re.probe_type) + '</td>'
+      + '<td style="font-size:12px;color:var(--mu)">' + (re.submitted_by || '\u2014') + '</td>'
+      + '<td>' + (re.proteins.length || re._proteinCount || 0) + '</td>'
+      + '<td onclick="event.stopPropagation()">' + (mis.length ? '<button class="bem bsm" onclick="openEmail(\'' + re.id + '\')">\ud83d\udce7 ' + mis.length + ' missing</button>' : '') + '</td>'
+      + '</tr>';
+  }
+  etHtml += '</tbody></table>';
+  et.innerHTML = etHtml;
+
+  // Load top detected targets from DB asynchronously
+  loadTopTargets();
+}
+
+async function loadTopTargets() {
+  if (!supa) return;
+  var r = await supa.from('proteins').select('uid,gene,min_r,experiment_id')
+    .not('min_r','is',null).lte('min_r',0.6).limit(500);
+  var pmap = {};
+  ((r.data)||[]).forEach(function(pr) {
+    if (!pmap[pr.uid]) pmap[pr.uid]={uid:pr.uid,gene:pr.gene,n:0,best:null};
+    pmap[pr.uid].n++;
+    if (pr.min_r!=null&&(pmap[pr.uid].best===null||pr.min_r<pmap[pr.uid].best))
+      pmap[pr.uid].best=pr.min_r;
+  });
+  var topProts=Object.values(pmap).sort(function(a,b){return b.n-a.n;}).slice(0,7);
+  var tpHtml='';
+  for (var i=0;i<topProts.length;i++) {
+    var p=topProts[i];
+    tpHtml+='<div class="hr" onclick="activeUid=&apos;'+p.uid+'&apos;;go(&apos;prot&apos;)"'
+      +' style="padding:9px 16px;border-bottom:1px solid #F8F7F3;display:flex;justify-content:space-between;align-items:center">'
+      +'<div><div style="font-size:13px;font-weight:600">'+(p.gene||p.uid)+'</div>'
+      +'<div style="font-size:11px;color:var(--fa);font-family:monospace">'+p.uid+'</div></div>'
+      +'<div style="text-align:right"><div style="font-size:12px;color:var(--br);font-weight:600">'+p.n+' exp'+(p.n!==1?'s':'')+'</div>'
+      +(p.best!=null?'<div style="font-size:11px;color:var(--fa)">best '+p.best.toFixed(3)+'</div>':'')
+      +'</div></div>';
+  }
+  var el=document.getElementById('d-tp');
+  if (el) el.innerHTML=tpHtml||'<p style="padding:1.5rem;color:var(--fa);font-size:13px;text-align:center">No data yet</p>';
+}
+
+// ── Query ─────────────────────────────────────────────────────────────────────
+
+function renderQueryFilters() {
+  var probes = {};
+  var users = {};
+  for (var i = 0; i < experiments.length; i++) {
+    if (experiments[i].probe_type) probes[experiments[i].probe_type] = 1;
+    if (experiments[i].submitted_by) users[experiments[i].submitted_by] = 1;
+  }
+  var probeOpts = '<option value="">All probes</option>';
+  Object.keys(probes).forEach(function(p) { probeOpts += '<option value="' + p + '">' + p + '</option>'; });
+  document.getElementById('qp').innerHTML = probeOpts;
+
+  var userOpts = '<option value="">All users</option>';
+  Object.keys(users).forEach(function(u) { userOpts += '<option value="' + u + '">' + u + '</option>'; });
+  document.getElementById('qu2').innerHTML = userOpts;
+}
+
+function doQuery() {
+  var q = (document.getElementById('qt').value || '').toLowerCase();
+  var probe = document.getElementById('qp').value;
+  var userF = document.getElementById('qu2').value;
+  var rThr = parseFloat(document.getElementById('qr').value) || null;
+
+  var m = {};
+  for (var i = 0; i < experiments.length; i++) {
+    var exp = experiments[i];
+    if (probe && exp.probe_type !== probe) continue;
+    if (userF && exp.submitted_by !== userF) continue;
+    for (var j = 0; j < exp.proteins.length; j++) {
+      var p = exp.proteins[j];
+      if (!m[p.uid]) m[p.uid] = {p:p, entries:[], best:null, bestCpd:null};
+      m[p.uid].entries.push({exp:exp, p:p});
+      if (p.minR != null && (m[p.uid].best === null || p.minR < m[p.uid].best)) {
+        m[p.uid].best = p.minR;
+        var cpds = Object.keys(p.tmt);
+        for (var c = 0; c < cpds.length; c++) {
+          if (p.tmt[cpds[c]].ratio === p.minR) { m[p.uid].bestCpd = cpds[c]; break; }
+        }
+      }
+    }
+  }
+
+  var arr = Object.values(m);
+  if (q) arr = arr.filter(function(x) {
+    return x.p.uid.toLowerCase().indexOf(q) >= 0 ||
+           x.p.name.toLowerCase().indexOf(q) >= 0 ||
+           x.p.gene.toLowerCase().indexOf(q) >= 0;
+  });
+  if (rThr) arr = arr.filter(function(x) { return x.best != null && x.best <= rThr; });
+  arr.sort(function(a,b) { return (a.best||999) - (b.best||999); });
+
+  document.getElementById('qc').textContent = arr.length + ' result' + (arr.length !== 1 ? 's' : '');
+
+  if (!arr.length) {
+    var msg = experiments.length === 0 ? 'No experiments loaded \u2014 upload one first' : 'No matching proteins found';
+    document.getElementById('qb').innerHTML = '<tr><td colspan="8" style="text-align:center;padding:3rem;color:var(--fa)">' + msg + '</td></tr>';
+    return;
+  }
+
+  var html = '';
+  for (var i = 0; i < arr.length; i++) {
+    var x = arr[i];
+    var p = x.p;
+    var best = x.best;
+    html += '<tr class="hr" onclick="activeUid=\'' + p.uid + '\';go(\'prot\')">'
+      + '<td><span class="uid">' + p.uid + '</span></td>'
+      + '<td><div style="font-size:13px;font-weight:600">' + (p.gene || p.uid) + '</div>'
+      + '<div style="font-size:11px;color:var(--fa);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + p.name + '</div></td>'
+      + '<td style="color:var(--mu);font-size:12px">' + (p.cat || '\u2014') + '</td>'
+      + '<td>' + (p.mw ? p.mw.toFixed(1) : '\u2014') + '</td>'
+      + '<td style="font-weight:700;color:' + rcol(best) + '">' + (best != null ? best.toFixed(3) : '\u2014') + (best != null && best <= 0.6 ? '<span style="font-size:9px;margin-left:3px">\u25cf</span>' : '') + '</td>'
+      + '<td>' + (best != null ? rbar(best) : '') + '</td>'
+      + '<td style="color:var(--mu)">' + x.entries.length + '</td>'
+      + '<td style="color:var(--fa)">\u2192</td></tr>';
+  }
+  document.getElementById('qb').innerHTML = html;
+}
+
+// ── Experiments list ──────────────────────────────────────────────────────────
+
+function renderExpList() {
+  if (!experiments.length) {
+    document.getElementById('el').innerHTML = '<div class="card"><div style="padding:4rem;text-align:center">'
+      + '<div style="font-size:36px;margin-bottom:12px">\u2b06</div>'
+      + '<p style="color:var(--fa);font-size:14px;margin:0 0 12px">No experiments yet</p>'
+      + '<button class="btn bp bsm" onclick="go(\'up\')">Upload first dataset</button></div></div>';
+    return;
+  }
+
+  var inc = experiments.filter(function(e) { return getMissing(e).length > 0; });
+  var html = '';
+  if (inc.length) {
+    html += '<div style="background:#FFFBEB;border:1.5px solid #FDE68A;border-radius:10px;padding:1rem 1.25rem;margin-bottom:12px">'
+      + '<div style="font-weight:600;font-size:13px;color:#92400E;margin-bottom:8px">\u26a0\ufe0f Click \ud83d\udce7 to request missing metadata</div>'
+      + '<div style="display:flex;flex-wrap:wrap;gap:6px">';
+    for (var i = 0; i < inc.length; i++) {
+      html += '<button class="bem" onclick="openEmail(\'' + inc[i].id + '\')">\ud83d\udce7 ' + (inc[i].filename || inc[i].name) + ' (' + getMissing(inc[i]).length + ' missing)</button>';
+    }
+    html += '</div></div>';
+  }
+
+  html += '<div class="card" style="overflow:hidden"><table><thead><tr>'
+    + '<th>File name</th><th>Probe</th><th>Type</th><th>Compound</th><th>Submitted by</th><th>Rep</th><th>Proteins</th><th>Status</th><th></th>'
+    + '</tr></thead><tbody>';
+
+  var rev = experiments.slice().reverse();
+  var lastSrc = null;
+  for (var i = 0; i < rev.length; i++) {
+    var e = rev[i];
+    // File grouping: insert a header row when source file changes
+    var curSrc = (e.sourceFile && e.sheetName) ? e.sourceFile : null;
+    if (curSrc !== lastSrc) {
+      if (curSrc) {
+        var sheetCnt = rev.filter(function(x){return x.sourceFile===curSrc&&x.sheetName;}).length;
+        html += '<tr><td colspan="9" style="padding:5px 12px 2px;font-size:10px;font-weight:700;color:var(--fa);background:var(--sf);border-top:2px solid var(--bo);letter-spacing:.04em">' + '&#x1F4C2; ' + curSrc + ' &mdash; ' + sheetCnt + ' sheet' + (sheetCnt!==1?'s':'') + '</td></tr>';
+      } else if (lastSrc) {
+        html += '<tr><td colspan="9" style="height:3px;background:var(--bo)"></td></tr>';
+      }
+      lastSrc = curSrc;
+    }
+    var mis = getMissing(e);
+    var statusHtml = mis.length
+      ? '<button class="bem" onclick="openEmail(\'' + e.id + '\')">\ud83d\udce7 ' + mis.length + ' missing</button>'
+      : '<span style="font-size:11px;background:#EBF5EC;color:#2E7D32;padding:2px 8px;border-radius:10px;font-weight:600">\u2713 Complete</span>';
+    html += '<tr class="hr" onclick="activeExpId=\'' + e.id + '\';go(\'exp\')">'
+      + '<td style="max-width:180px">' + (e.sheetName   ? '<div style="font-weight:600;font-family:monospace;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + e.sheetName + '</div>'     + '<div style="font-size:10px;color:var(--fa);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + e.sourceFile + '">' + e.sourceFile + '</div>'   : '<div style="font-weight:500;font-family:monospace;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (e.filename || e.name) + '</div>' ) + '</td>'
+      + '<td>' + probeBadge(e.probe_type) + '</td>'
+      + '<td>' + (e.type==='labelfree' ? '<span style="font-size:10px;background:#E0F5EE;color:#0A5C44;padding:2px 7px;border-radius:10px;font-weight:600">Label-free</span>' : '<span style="font-size:10px;background:#EEEDFB;color:#3B337A;padding:2px 7px;border-radius:10px;font-weight:600">TMT</span>') + '</td>'
+      + '<td style="font-size:12px;color:var(--mu);max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (e.compound || '\u2014') + '</td>'
+      + '<td style="font-size:12px;color:var(--mu)">' + (e.submitted_by || '\u2014') + '</td>'
+      + '<td style="font-size:12px;color:var(--mu)">' + (e.bio_rep ? 'Rep ' + e.bio_rep : '\u2014') + '</td>'
+      + '<td>' + e.proteins.length + '</td>'
+      + '<td onclick="event.stopPropagation()">' + statusHtml + '</td>'
+      + '<td onclick="event.stopPropagation()" style="white-space:nowrap">'
+      + '<button class="bcsv bsm" onclick="expCSV(\'' + e.id + '\')">\u2b07 CSV</button> '
+      + '<button class="btn bsm bd2" onclick="deleteExp(\'' + e.id + '\')">\xd7</button>'
+      + '</td></tr>';
+  }
+  html += '</tbody></table></div>';
+  document.getElementById('el').innerHTML = html;
+}
+
+async function deleteExp(id) {
+  var exp = experiments.filter(function(e) { return e.id === id; })[0];
+  if (!exp || !confirm('Delete "' + (exp.filename || exp.name) + '"?')) return;
+  var r = await supa.from('experiments').delete().eq('id', id);
+  if (r.error) { alert('Delete failed: ' + r.error.message); return; }
+  experiments = experiments.filter(function(e) { return e.id !== id; });
+  delete _proteinCache[id];
+  go('exps');
+}
+
+// ── Experiment detail ─────────────────────────────────────────────────────────
+
+async function renderExpDetail() {
+  var exp = await ensureProteins(activeExpId);
+  if (!exp) { document.getElementById('ed').innerHTML = '<p>Not found.</p>'; return; }
+  if (exp.type === 'labelfree') { renderLFDetail(exp); return; }
+
+  var mis = getMissing(exp);
+  var hits = exp.proteins.filter(function(p) { return p.minR != null && p.minR <= 0.6; }).length;
+  var tr = [exp.treat_conc, exp.treat_time, exp.treat_type, exp.treat_media].filter(Boolean).join(' \u00b7 ');
+
+  var banner = mis.length
+    ? '<div style="background:#FFFBEB;border:1.5px solid #FDE68A;border-radius:10px;padding:1rem 1.25rem;margin-bottom:1rem;display:flex;justify-content:space-between;align-items:flex-start;gap:12px">'
+      + '<div><div style="font-weight:600;color:#92400E;margin-bottom:6px">\u26a0\ufe0f ' + mis.length + ' metadata field' + (mis.length !== 1 ? 's' : '') + ' missing</div>'
+      + '<div>' + mis.map(function(f) { return '<span class="fp">' + f + '</span>'; }).join('') + '</div></div>'
+      + '<button class="bem" style="font-size:13px;padding:8px 16px;flex-shrink:0" onclick="openEmail(\'' + exp.id + '\')">\ud83d\udce7 Request info</button></div>'
+    : '<div class="ok" style="margin-bottom:1rem">\u2713 All metadata complete</div>';
+
+  var html = '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem">'
+    + '<div><h2 style="font-size:18px;font-weight:700;margin:0 0 4px;font-family:monospace">' + (exp.filename || exp.name) + '</h2>'
+    + '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--mu)">'
+    + probeBadge(exp.probe_type)
+    + (exp.cell_line ? '<span>' + exp.cell_line + '</span>' : '')
+    + (exp.bio_rep ? '<span>Rep ' + exp.bio_rep + '</span>' : '')
+    + (exp.instrument ? '<span>' + exp.instrument + '</span>' : '')
+    + (exp.submitted_by ? '<span>by ' + exp.submitted_by + '</span>' : '')
+    + '</div></div>'
+    + '<div style="display:flex;gap:8px;flex-shrink:0">'
+    + '<button class="bcsv" onclick="expCSV(\'' + exp.id + '\')">\u2b07 Export CSV</button>'
+    + '<button class="btn bsm" onclick="activeExpId=\'' + exp.id + '\';go(\'anlys\')">\ud83c\udf0b Volcano</button>'
+    + '<button class="btn bsm bd2" onclick="if(confirm(\'Delete?\'))deleteExp(\'' + exp.id + '\')">\xd7</button>'
+    + '</div></div>'
+    + banner
+    + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.25rem">'
+    + '<div class="st"><div class="sl">Proteins</div><div class="sv">' + exp.proteins.length + '</div></div>'
+    + '<div class="st"><div class="sl">Compounds</div><div class="sv">' + exp.compounds.length + '</div></div>'
+    + '<div class="st"><div class="sl">Engaged \u22640.60</div><div class="sv" style="color:var(--br)">' + hits + '</div></div>'
+    + '<div class="st"><div class="sl">Bio. replicate</div><div class="sv" style="font-size:18px">' + (exp.bio_rep || '\u2014') + '</div></div>'
+    + '</div>'
+    + '<div class="card" style="margin-bottom:12px"><div class="ch">Experiment details</div><div style="padding:1rem 1.25rem">'
+    + metaRow('File name', exp.sheetName ? exp.sourceFile + ' &#x2192; ' + exp.sheetName : exp.filename)
+    + metaRow('Submitted by', exp.submitted_by ? exp.submitted_by + ' &lt;' + exp.submitter_email + '&gt;' : null)
+    + metaRow('LC-MS/MS experiment', exp.lcms)
+    + metaRow('Biological replicate', exp.bio_rep ? 'Replicate ' + exp.bio_rep : null)
+    + metaRow('Probe used', exp.probe_label)
+    + metaRow('Compound name(s)', exp.compound)
+    + metaRow('Treatment conditions', tr || null)
+    + metaRow('Lysis conditions', exp.lysis)
+    + metaRow('Cell line', exp.cell_line)
+    + metaRow('Instrument', exp.instrument)
+    + '</div></div>'
+    + '<div class="card" style="overflow:hidden"><div class="ch">Proteins \u2014 ranked by best TMT ratio</div>'
+    + '<div style="overflow-x:auto"><table><thead><tr>'
+    + '<th>UniProt</th><th>Gene</th><th>Category</th><th>Cov.</th>';
+  for (var c = 0; c < exp.compounds.length; c++) html += '<th>' + exp.compounds[c] + '</th>';
+  html += '<th></th></tr></thead><tbody>';
+
+  for (var i = 0; i < exp.proteins.length; i++) {
+    var p = exp.proteins[i];
+    html += '<tr class="hr" onclick="activeUid=\'' + p.uid + '\';go(\'prot\')">'
+      + '<td><span class="uid">' + p.uid + '</span></td>'
+      + '<td><div style="font-size:13px;font-weight:600">' + (p.gene || '\u2014') + '</div>'
+      + '<div style="font-size:11px;color:var(--fa);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + p.name + '</div></td>'
+      + '<td style="color:var(--mu);font-size:12px">' + (p.cat || '\u2014') + '</td>'
+      + '<td style="color:var(--mu);font-size:12px">' + (p.cov ? p.cov.toFixed(0) + '%' : '\u2014') + '</td>';
+    for (var c = 0; c < exp.compounds.length; c++) {
+      var r = p.tmt[exp.compounds[c]] ? p.tmt[exp.compounds[c]].ratio : null;
+      html += '<td style="font-size:12px;font-weight:' + (r != null && r <= 0.6 ? 700 : 400) + ';color:' + rcol(r) + '">'
+        + (r != null ? r.toFixed(3) : '\u2014') + '</td>';
+    }
+    html += '<td style="color:var(--fa)">\u2192</td></tr>';
+  }
+  html += '</tbody></table></div></div>';
+  document.getElementById('ed').innerHTML = html;
+}
+
+// ── Protein detail ────────────────────────────────────────────────────────────
+
+// ── Label-free experiment detail ──────────────────────────────────────────────
+
+function renderLFDetail(exp) {
+  var id = exp.id;
+  var mis = getMissing(exp);
+
+  var misHtml;
+  if (mis.length) {
+    var mf = mis.map(function(f) { return '<span class="fp">' + f + '</span>'; }).join('');
+    misHtml = '<div style="background:#FFFBEB;border:1.5px solid #FDE68A;border-radius:10px;'
+      + 'padding:1rem 1.25rem;margin-bottom:1rem;display:flex;justify-content:space-between;align-items:flex-start;gap:12px">'
+      + '<div><div style="font-weight:600;color:#92400E;margin-bottom:6px">&#x26A0; '
+      + mis.length + ' metadata field' + (mis.length !== 1 ? 's' : '') + ' missing</div>'
+      + '<div>' + mf + '</div></div>'
+      + '<button class="bem" style="font-size:13px;padding:8px 16px;flex-shrink:0"'
+      + ' onclick="openEmail(&apos;' + id + '&apos;)">&#x1F4E7; Request info</button></div>';
+  } else {
+    misHtml = '<div class="ok" style="margin-bottom:1rem">&#x2713; All metadata complete</div>';
+  }
+
+  var trows = '';
+  for (var i = 0; i < exp.proteins.length; i++) {
+    var p = exp.proteins[i];
+    trows += '<tr class="hr" onclick="activeUid=&apos;' + p.uid + '&apos;;go(&apos;prot&apos;)">'
+      + '<td><span class="uid">' + p.uid + '</span></td>'
+      + '<td style="font-weight:600">' + (p.gene || '&mdash;') + '</td>'
+      + '<td style="font-size:12px;color:var(--mu);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + p.name + '</td>'
+      + '<td style="font-weight:700;color:var(--br)">' + (p.psm != null ? p.psm : '&mdash;') + '</td>'
+      + '<td style="color:var(--mu)">' + (p.pep != null ? p.pep : '&mdash;') + '</td>'
+      + '<td style="color:var(--mu)">' + (p.mw != null ? p.mw.toFixed(1) : '&mdash;') + '</td>'
+      + '<td style="color:var(--mu)">' + (p.cov != null ? p.cov.toFixed(0) + '%' : '&mdash;') + '</td>'
+      + '<td style="font-size:11px;color:#0A5C44;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"'
+      + ' title="' + p.mods + '">' + (p.mods || '&mdash;') + '</td></tr>';
+  }
+
+  document.getElementById('ed').innerHTML =
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem">'
+    + '<div><h2 style="font-size:18px;font-weight:700;margin:0 0 4px;font-family:monospace">' + (exp.filename || exp.name) + '</h2>'
+    + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--mu)">'
+    + '<span style="background:#E0F5EE;color:#0A5C44;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600">&#x1F7E2; Label-free</span>'
+    + probeBadge(exp.probe_type)
+    + (exp.cell_line ? '<span>' + exp.cell_line + '</span>' : '')
+    + (exp.bio_rep ? '<span>Rep ' + exp.bio_rep + '</span>' : '')
+    + (exp.submitted_by ? '<span>by ' + exp.submitted_by + '</span>' : '')
+    + '</div></div>'
+    + '<div style="display:flex;gap:8px;flex-shrink:0">'
+    + '<button class="bcsv" onclick="expCSV(&apos;' + id + '&apos;)">&#x2B07; Export CSV</button>'
+    + '<button class="btn bsm bd2" onclick="if(confirm(&apos;Delete?&apos;))deleteExp(&apos;' + id + '&apos;)">&#xD7;</button>'
+    + '</div></div>'
+    + misHtml
+    + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1.25rem">'
+    + '<div class="st"><div class="sl">Proteins detected</div><div class="sv">' + exp.proteins.length + '</div></div>'
+    + '<div class="st"><div class="sl">Probe used</div><div class="sv" style="font-size:15px">' + (exp.probe_type || '&mdash;') + '</div></div>'
+    + '<div class="st"><div class="sl">Cell line</div><div class="sv" style="font-size:15px">' + (exp.cell_line || '&mdash;') + '</div></div>'
+    + '</div>'
+    + '<div class="card" style="margin-bottom:12px"><div class="ch">Experiment details</div><div style="padding:1rem 1.25rem">'
+    + metaRow('File name', exp.sheetName ? exp.sourceFile + ' &#x2192; ' + exp.sheetName : exp.filename)
+    + metaRow('Submitted by', exp.submitted_by ? exp.submitted_by + ' &lt;' + exp.submitter_email + '&gt;' : null)
+    + metaRow('Probe used', exp.probe_label)
+    + metaRow('Cell line', exp.cell_line)
+    + metaRow('Instrument', exp.instrument)
+    + '</div></div>'
+    + '<div class="card" style="overflow:hidden">'
+    + '<div class="ch">Detected proteins &mdash; ranked by spectral count</div>'
+    + '<div style="overflow-x:auto"><table><thead><tr>'
+    + '<th>UniProt</th><th>Gene</th><th>Protein</th><th>PSMs</th>'
+    + '<th>Peptides</th><th>MW (kDa)</th><th>Cov.</th><th>Modifications (labeled site)</th>'
+    + '</tr></thead><tbody>' + trows + '</tbody></table></div></div>';
+}
+
+// ── Venn diagram (label-free experiments) ─────────────────────────────────────
+
+function initVenn() {
+  var lfE = experiments.filter(function(e) { return e.type === 'labelfree'; });
+  var vb  = document.getElementById('venn-body');
+  if (!vb) return;
+  if (!lfE.length) {
+    vb.innerHTML = '<p style="font-size:13px;color:var(--fa)">Upload label-free experiments to enable Venn diagram.</p>';
+    return;
+  }
+  var opts = '<option value="">Select experiment&hellip;</option>'
+    + lfE.map(function(e) { return '<option value="' + e.id + '">' + (e.filename || e.name) + '</option>'; }).join('');
+  var opts3 = '<option value="">None (2-way Venn)</option>'
+    + lfE.map(function(e) { return '<option value="' + e.id + '">' + (e.filename || e.name) + '</option>'; }).join('');
+  vb.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;align-items:flex-end;margin-bottom:12px">'
+    + '<div><label class="lb">Experiment A</label><select id="venn-ea" class="fc">' + opts  + '</select></div>'
+    + '<div><label class="lb">Experiment B</label><select id="venn-eb" class="fc">' + opts  + '</select></div>'
+    + '<div><label class="lb">Experiment C (optional)</label><select id="venn-ec" class="fc">' + opts3 + '</select></div>'
+    + '<button class="btn bp bsm" onclick="drawVenn()">Draw</button>'
+    + '</div><div id="venn-result"><p style="font-size:13px;color:var(--fa)">Select experiments and click Draw.</p></div>';
+}
+
+function drawVenn() {
+  var eaId = document.getElementById('venn-ea') ? document.getElementById('venn-ea').value : '';
+  var ebId = document.getElementById('venn-eb') ? document.getElementById('venn-eb').value : '';
+  var ecId = document.getElementById('venn-ec') ? document.getElementById('venn-ec').value : '';
+  var ea = experiments.filter(function(e) { return e.id === eaId; })[0];
+  var eb = experiments.filter(function(e) { return e.id === ebId; })[0];
+  var ec = ecId ? experiments.filter(function(e) { return e.id === ecId; })[0] : null;
+  var res = document.getElementById('venn-result');
+  if (!ea || !eb)           { res.innerHTML = '<p style="color:var(--mu)">Select at least two experiments.</p>'; return; }
+  if (ea.id === eb.id)      { res.innerHTML = '<p style="color:var(--mu)">Please select two different experiments.</p>'; return; }
+
+  var setA = {}; ea.proteins.forEach(function(p) { setA[p.uid] = p; });
+  var setB = {}; eb.proteins.forEach(function(p) { setB[p.uid] = p; });
+
+  if (ec && ec.id !== ea.id && ec.id !== eb.id) {
+    var setC = {}; ec.proteins.forEach(function(p) { setC[p.uid] = p; });
+    res.innerHTML = makeVenn3(ea, eb, ec, setA, setB, setC);
+  } else {
+    res.innerHTML = makeVenn2(ea, eb, setA, setB);
+  }
+}
+
+function vennList(title, uids, pmap, color) {
+  var items = uids.slice(0, 60).map(function(uid) {
+    var p = pmap[uid] || {};
+    return '<div style="padding:2px 0;border-bottom:1px solid #f5f5f5">'
+      + '<span style="font-weight:600">' + (p.gene || uid) + '</span>'
+      + '<span style="color:var(--fa);margin-left:4px;font-size:10px">' + uid + '</span>'
+      + (p.psm != null ? ' <span style="color:var(--br);font-size:10px">' + p.psm + ' PSMs</span>' : '')
+      + '</div>';
+  }).join('');
+  return '<div class="card" style="padding:10px">'
+    + '<div style="font-size:12px;font-weight:700;color:' + color + ';margin-bottom:4px">' + title + '</div>'
+    + '<div style="font-size:20px;font-weight:800;color:' + color + ';margin-bottom:6px">' + uids.length + '</div>'
+    + '<div style="max-height:160px;overflow-y:auto;font-size:11px">' + items
+    + (uids.length > 60 ? '<div style="color:var(--fa);padding-top:4px">+ ' + (uids.length - 60) + ' more</div>' : '')
+    + '</div></div>';
+}
+
+function makeVenn2(ea, eb, setA, setB) {
+  var onlyA = Object.keys(setA).filter(function(u) { return !setB[u]; });
+  var onlyB = Object.keys(setB).filter(function(u) { return !setA[u]; });
+  var both  = Object.keys(setA).filter(function(u) { return  setB[u]; });
+  var total = onlyA.length + onlyB.length + both.length;
+  var nameA = (ea.filename || ea.name).slice(0, 22);
+  var nameB = (eb.filename || eb.name).slice(0, 22);
+
+  var svg = '<svg viewBox="0 0 460 220" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:460px;display:block;margin:0 auto 12px">'
+    + '<circle cx="175" cy="105" r="95" fill="rgba(74,63,168,0.18)" stroke="#4A3FA8" stroke-width="2"/>'
+    + '<circle cx="285" cy="105" r="95" fill="rgba(10,92,68,0.15)" stroke="#0A5C44" stroke-width="2"/>'
+    + '<text x="115" y="110" text-anchor="middle" font-size="26" font-weight="800" fill="#4A3FA8">' + onlyA.length + '</text>'
+    + '<text x="230" y="110" text-anchor="middle" font-size="26" font-weight="800" fill="#2D2878">' + both.length + '</text>'
+    + '<text x="345" y="110" text-anchor="middle" font-size="26" font-weight="800" fill="#0A5C44">' + onlyB.length + '</text>'
+    + '<text x="175" y="212" text-anchor="middle" font-size="10" fill="#6B6960">' + nameA + '</text>'
+    + '<text x="285" y="212" text-anchor="middle" font-size="10" fill="#6B6960">' + nameB + '</text>'
+    + '<text x="230" y="16" text-anchor="middle" font-size="11" fill="#6B6960">' + total + ' unique proteins total</text>'
+    + '</svg>';
+
+  return svg + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">'
+    + vennList('Only in A: ' + nameA, onlyA, setA, '#4A3FA8')
+    + vennList('In both A &amp; B', both, setA, '#2D2878')
+    + vennList('Only in B: ' + nameB, onlyB, setB, '#0A5C44')
+    + '</div>';
+}
+
+function makeVenn3(ea, eb, ec, setA, setB, setC) {
+  var onlyA = Object.keys(setA).filter(function(u) { return !setB[u] && !setC[u]; });
+  var onlyB = Object.keys(setB).filter(function(u) { return !setA[u] && !setC[u]; });
+  var onlyC = Object.keys(setC).filter(function(u) { return !setA[u] && !setB[u]; });
+  var AB    = Object.keys(setA).filter(function(u) { return  setB[u] && !setC[u]; });
+  var AC    = Object.keys(setA).filter(function(u) { return !setB[u] &&  setC[u]; });
+  var BC    = Object.keys(setB).filter(function(u) { return !setA[u] &&  setC[u]; });
+  var ABC   = Object.keys(setA).filter(function(u) { return  setB[u] &&  setC[u]; });
+  var merged = {}; [setA, setB, setC].forEach(function(s) { Object.keys(s).forEach(function(u) { merged[u] = s[u]; }); });
+  var total = Object.keys(merged).length;
+  var nameA = (ea.filename || ea.name).slice(0, 16);
+  var nameB = (eb.filename || eb.name).slice(0, 16);
+  var nameC = (ec.filename || ec.name).slice(0, 16);
+
+  var svg = '<svg viewBox="0 0 460 290" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:460px;display:block;margin:0 auto 12px">'
+    + '<circle cx="185" cy="120" r="95" fill="rgba(74,63,168,0.15)" stroke="#4A3FA8" stroke-width="2"/>'
+    + '<circle cx="275" cy="120" r="95" fill="rgba(10,92,68,0.12)" stroke="#0A5C44" stroke-width="2"/>'
+    + '<circle cx="230" cy="200" r="95" fill="rgba(154,52,18,0.10)" stroke="#9A3412" stroke-width="2"/>'
+    + '<text x="130" y="100" text-anchor="middle" font-size="16" font-weight="800" fill="#4A3FA8">' + onlyA.length + '</text>'
+    + '<text x="330" y="100" text-anchor="middle" font-size="16" font-weight="800" fill="#0A5C44">' + onlyB.length + '</text>'
+    + '<text x="230" y="270" text-anchor="middle" font-size="16" font-weight="800" fill="#9A3412">' + onlyC.length + '</text>'
+    + '<text x="230" y="100" text-anchor="middle" font-size="14" font-weight="700" fill="#2D2878">' + AB.length + '</text>'
+    + '<text x="163" y="175" text-anchor="middle" font-size="14" font-weight="700" fill="#7B3412">' + AC.length + '</text>'
+    + '<text x="297" y="175" text-anchor="middle" font-size="14" font-weight="700" fill="#0A5C44">' + BC.length + '</text>'
+    + '<text x="230" y="155" text-anchor="middle" font-size="13" font-weight="700" fill="#1C1B18">' + ABC.length + '</text>'
+    + '<text x="160" y="235" text-anchor="middle" font-size="9" fill="#6B6960">' + nameA + '</text>'
+    + '<text x="300" y="235" text-anchor="middle" font-size="9" fill="#6B6960">' + nameB + '</text>'
+    + '<text x="230" y="288" text-anchor="middle" font-size="9" fill="#6B6960">' + nameC + '</text>'
+    + '<text x="230" y="15" text-anchor="middle" font-size="11" fill="#6B6960">' + total + ' unique proteins total</text>'
+    + '</svg>';
+
+  return svg
+    + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:6px">'
+    + vennList('A only', onlyA, setA, '#4A3FA8')
+    + vennList('B only', onlyB, setB, '#0A5C44')
+    + vennList('C only', onlyC, setC, '#9A3412')
+    + vennList('A &cap; B &cap; C', ABC, merged, '#1C1B18')
+    + '</div>'
+    + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">'
+    + vennList('A &cap; B only', AB, merged, '#2D2878')
+    + vennList('A &cap; C only', AC, merged, '#7B3412')
+    + vennList('B &cap; C only', BC, merged, '#0A5C44')
+    + '</div>';
+}
+
+function renderProtDetail() {
+  var entries = [];
+  for (var i = 0; i < experiments.length; i++) {
+    for (var j = 0; j < experiments[i].proteins.length; j++) {
+      if (experiments[i].proteins[j].uid === activeUid) {
+        entries.push({exp: experiments[i], p: experiments[i].proteins[j]});
+        break;
+      }
+    }
+  }
+  if (!entries.length) { document.getElementById('pd').innerHTML = '<p>Not found.</p>'; return; }
+
+  Object.values(charts).forEach(function(c) { try { c.destroy(); } catch(e) {} });
+  charts = {};
+
+  var rep = entries[0].p;
+  var cardsHtml = '';
+  var canvasIds = [];
+
+  for (var i = 0; i < entries.length; i++) {
+    var entry = entries[i];
+    var exp = entry.exp;
+    var p = entry.p;
+    var tr = [exp.treat_conc, exp.treat_time, exp.treat_type, exp.treat_media].filter(Boolean).join(' \u00b7 ');
+    var cid = 'chart_' + i + '_' + Date.now();
+    canvasIds.push({id: cid, idx: i, exp: exp, p: p});
+
+    var barsHtml = '';
+    for (var c = 0; c < exp.compounds.length; c++) {
+      var cpd = exp.compounds[c];
+      var r = p.tmt[cpd] ? p.tmt[cpd].ratio : null;
+      var col = r == null ? '#ddd' : r <= 0.5 ? 'var(--br)' : r <= 0.65 ? '#7B74D8' : '#C8C8C8';
+      var w = Math.min((r != null ? r : 1) * 100, 130);
+      barsHtml += '<div style="display:flex;align-items:center;gap:7px;margin-bottom:4px">'
+        + '<span style="font-size:11px;font-family:monospace;min-width:52px;color:var(--mu)">' + cpd + '</span>'
+        + '<div class="rb"><div class="rf" style="width:' + w + '%;background:' + col + '"></div></div>'
+        + '<span style="font-size:11px;font-weight:600;color:' + col + ';min-width:38px">' + (r != null ? r.toFixed(3) : '\u2014') + '</span>'
+        + (r != null && r <= 0.6 ? '<span style="font-size:9px;color:var(--br);font-weight:700">\u25cf</span>' : '')
+        + '</div>';
+    }
+
+    cardsHtml += '<div class="card" style="margin-bottom:12px">'
+      + '<div class="ch"><div style="display:flex;align-items:center;gap:8px">' + probeBadge(exp.probe_type)
+      + '<span style="font-family:monospace;font-size:12px">' + (exp.filename || exp.name) + '</span></div>'
+      + '<span style="font-size:12px;color:var(--mu)">'
+      + [exp.submitted_by, exp.cell_line, exp.bio_rep ? 'Rep ' + exp.bio_rep : '', exp.instrument].filter(Boolean).join(' \u00b7 ')
+      + '</span></div>'
+      + '<div style="padding:1.25rem;display:grid;grid-template-columns:240px 1fr;gap:20px;align-items:start">'
+      + '<div>'
+      + (exp.probe_label ? '<div style="font-size:12px;margin-bottom:5px"><span style="color:var(--mu)">Probe: </span>' + exp.probe_label + '</div>' : '')
+      + (exp.compound ? '<div style="font-size:12px;margin-bottom:5px"><span style="color:var(--mu)">Compound: </span>' + exp.compound + '</div>' : '')
+      + (tr ? '<div style="font-size:12px;margin-bottom:10px"><span style="color:var(--mu)">Treatment: </span>' + tr + '</div>' : '')
+      + '<div style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">TMT competition ratios</div>'
+      + barsHtml
+      + '<div style="font-size:10px;color:var(--fa);margin-top:8px">\u25cf ratio \u22640.60 = significant engagement</div>'
+      + '</div><div><canvas id="' + cid + '" height="180"></canvas></div></div></div>';
+  }
+
+  var html = '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.25rem">'
+    + '<div><h2 style="font-size:22px;font-weight:700;margin:0 0 4px">' + (rep.gene || activeUid) + '</h2>'
+    + '<div style="font-size:13px;color:var(--mu);margin-bottom:8px">' + rep.name + '</div>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
+    + '<span class="uid">' + activeUid + '</span>'
+    + (rep.org ? '<em style="font-size:12px;color:var(--mu)">' + rep.org + '</em>' : '')
+    + (rep.cat ? '<span style="font-size:11px;background:var(--bl);color:var(--bd);padding:2px 9px;border-radius:20px;font-weight:600">' + rep.cat + '</span>' : '')
+    + '</div></div>'
+    + '<a href="https://www.uniprot.org/uniprot/' + activeUid + '" target="_blank" style="font-size:12px;color:var(--br);text-decoration:none;border:1px solid var(--bo);border-radius:6px;padding:5px 12px">UniProt \u2197</a>'
+    + '</div>'
+    + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.25rem">'
+    + '<div class="st"><div class="sl">MW</div><div class="sv" style="font-size:20px">' + (rep.mw ? rep.mw.toFixed(1) : '\u2014') + '</div><div class="ss">kDa</div></div>'
+    + '<div class="st"><div class="sl">Coverage</div><div class="sv" style="font-size:20px">' + (rep.cov ? rep.cov.toFixed(0) + '%' : '\u2014') + '</div></div>'
+    + '<div class="st"><div class="sl">Peptides</div><div class="sv" style="font-size:20px">' + (rep.pep != null ? rep.pep : '\u2014') + '</div></div>'
+    + '<div class="st"><div class="sl">Experiments</div><div class="sv" style="font-size:20px">' + entries.length + '</div></div>'
+    + '</div>'
+    + cardsHtml;
+
+  if (rep.bp && rep.bp !== 'nan') {
+    html += '<div class="card"><div class="ch">Functional annotation</div><div style="padding:1.25rem;display:grid;grid-template-columns:repeat(3,1fr);gap:16px">';
+    var annots = [['Biological process', rep.bp], ['Cellular component', rep.cc], ['Molecular function', rep.mf]];
+    for (var a = 0; a < annots.length; a++) {
+      if (annots[a][1] && annots[a][1] !== 'nan') {
+        html += '<div><div style="font-size:11px;color:var(--fa);margin-bottom:4px;font-weight:700;text-transform:uppercase;letter-spacing:.05em">' + annots[a][0] + '</div>'
+          + '<div style="font-size:12px;color:var(--mu)">' + annots[a][1] + '</div></div>';
+      }
+    }
+    html += '</div></div>';
+  }
+
+  document.getElementById('pd').innerHTML = html;
+
+  setTimeout(function() {
+    if (!chartReady && !window.Chart) { loadChart(function() { drawProtCharts(canvasIds); }); return; }
+    chartReady = true;
+    drawProtCharts(canvasIds);
+  }, 150);
+}
+
+function drawProtCharts(canvasIds) {
+  for (var i = 0; i < canvasIds.length; i++) {
+    (function(ci) {
+      var cv = document.getElementById(ci.id);
+      if (!cv) return;
+      var cpds = ci.exp.compounds;
+      var data = cpds.map(function(c) { return ci.p.tmt[c] ? ci.p.tmt[c].ratio : null; });
+      var colors = data.map(function(r) { return r == null ? '#ddd' : r <= 0.5 ? '#4A3FA8' : r <= 0.65 ? '#7B74D8' : '#C8C8C8'; });
+      charts['c' + ci.idx] = new Chart(cv, {
+        type: 'bar',
+        data: {
+          labels: cpds,
+          datasets: [
+            {label:'TMT ratio', data:data, backgroundColor:colors, borderWidth:0, borderRadius:3},
+            {type:'line', data:cpds.map(function(){return 1;}), borderColor:'#AAA', borderWidth:1, borderDash:[4,3], pointRadius:0, fill:false}
+          ]
+        },
+        options: {
+          plugins: {
+            legend: {display:false},
+            tooltip: {callbacks: {label: function(ctx) {
+              var r = ctx.parsed.y;
+              var pv = ci.p.tmt[cpds[ctx.dataIndex]] ? ci.p.tmt[cpds[ctx.dataIndex]].pval : null;
+              return r != null ? 'Ratio: ' + r.toFixed(4) + (pv != null ? ' | p=' + pv.toExponential(2) : '') : ' \u2014';
+            }}}
+          },
+          scales: {
+            y: {min:0, max:1.4, ticks:{font:{size:11}}, title:{display:true, text:'Ratio vs vehicle', font:{size:10}, color:'#999'}},
+            x: {ticks:{font:{size:11}}}
+          }
+        }
+      });
+    })(canvasIds[i]);
+  }
+}
+
+// ── Volcano ───────────────────────────────────────────────────────────────────
+
+function initVolcano() {
+  var sel = document.getElementById('ve');
+  var tmtE = experiments.filter(function(e) { return e.type !== 'labelfree'; });
+  sel.innerHTML = '<option value="">Select experiment\u2026</option>';
+  for (var i = 0; i < tmtE.length; i++) {
+    sel.innerHTML += '<option value="' + tmtE[i].id + '">' + (tmtE[i].filename || tmtE[i].name) + '</option>';
+  }
+  if (activeExpId) { sel.value = activeExpId; populateVolcCpds(); }
+}
+
+function populateVolcCpds() {
+  var expId = document.getElementById('ve').value;
+  var exp = experiments.filter(function(e) { return e.id === expId; })[0];
+  var vc = document.getElementById('vc');
+  vc.innerHTML = '';
+  if (exp) {
+    for (var c = 0; c < exp.compounds.length; c++) {
+      vc.innerHTML += '<option value="' + exp.compounds[c] + '">' + exp.compounds[c] + ' vs Vehicle</option>';
+    }
+    drawVolcano();
+  } else {
+    vc.innerHTML = '<option value="">Select compound\u2026</option>';
+  }
+}
+
+function drawVolcano() {
+  var expId = document.getElementById('ve').value;
+  var cpd = document.getElementById('vc').value;
+  var thr = parseFloat(document.getElementById('vrt').value) || 0.6;
+  var exp = experiments.filter(function(e) { return e.id === expId; })[0];
+
+  if (!exp || !cpd) {
+    document.getElementById('vpc').innerHTML = '<div style="padding:3rem;text-align:center;color:var(--fa)">Select an experiment and compound above</div>';
+    return;
+  }
+
+  if (!chartReady && !window.Chart) {
+    document.getElementById('vpc').innerHTML = '<div style="padding:2rem;text-align:center" class="wi">Loading chart library\u2026</div>';
+    loadChart(function() { chartReady = true; drawVolcano(); });
+    return;
+  }
+  chartReady = true;
+
+  var pts = [];
+  for (var i = 0; i < exp.proteins.length; i++) {
+    var p = exp.proteins[i];
+    var td = p.tmt[cpd];
+    if (!td || td.ratio == null || td.pval == null || td.ratio <= 0 || td.pval <= 0) continue;
+    pts.push({
+      x: Math.log2(td.ratio),
+      y: -Math.log10(td.pval),
+      gene: p.gene || p.uid,
+      uid: p.uid,
+      ratio: td.ratio,
+      pval: td.pval,
+      sig: td.ratio <= thr && td.pval <= 0.05,
+      engaged: td.ratio <= thr
+    });
+  }
+
+  var colors = pts.map(function(d) { return d.sig ? '#4A3FA8' : d.engaged ? '#9F99E4' : 'rgba(180,180,180,0.6)'; });
+  var sizes = pts.map(function(d) { return d.sig ? 6 : d.engaged ? 5 : 4; });
+
+  document.getElementById('vpc').innerHTML = '<div style="padding:1.25rem"><canvas id="vcnv" height="420"></canvas></div>';
+  if (volcChart) { try { volcChart.destroy(); } catch(e) {} }
+
+  setTimeout(function() {
+    var cv = document.getElementById('vcnv');
+    if (!cv) return;
+    var l2thr = Math.log2(thr);
+    volcChart = new Chart(cv, {
+      type: 'scatter',
+      data: {datasets: [{data: pts, backgroundColor: colors, pointRadius: sizes, pointHoverRadius: 7}]},
+      options: {
+        onClick: function(evt, els) {
+          if (els.length) { activeUid = pts[els[0].index].uid; go('prot'); }
+        },
+        plugins: {
+          legend: {display: false},
+          tooltip: {callbacks: {label: function(ctx) {
+            var d = pts[ctx.dataIndex];
+            return [d.gene + ': log\u2082(ratio)=' + d.x.toFixed(3), '\u2212log\u2081\u2080(p)=' + d.y.toFixed(2) + ' | ratio=' + d.ratio.toFixed(3) + ' | p=' + d.pval.toExponential(2)];
+          }}},
+          title: {display: true, text: (exp.filename || exp.name) + ' \u00b7 ' + cpd + ' vs Vehicle', font:{size:13}}
+        },
+        scales: {
+          x: {title:{display:true, text:'log\u2082(TMT ratio)', font:{size:12}}, grid:{color:'rgba(0,0,0,0.05)'}},
+          y: {title:{display:true, text:'\u2212log\u2081\u2080(adj. p-value)', font:{size:12}}, grid:{color:'rgba(0,0,0,0.05)'}}
+        }
+      },
+      plugins: [{
+        id: 'thresholds',
+        afterDraw: function(chart) {
+          var ctx2 = chart.ctx;
+          var ca = chart.chartArea;
+          var xsc = chart.scales.x;
+          var ysc = chart.scales.y;
+          if (xsc.min <= l2thr && l2thr <= xsc.max) {
+            var xpx = xsc.getPixelForValue(l2thr);
+            ctx2.save(); ctx2.beginPath(); ctx2.moveTo(xpx, ca.top); ctx2.lineTo(xpx, ca.bottom);
+            ctx2.strokeStyle = '#9F99E4'; ctx2.lineWidth = 1; ctx2.setLineDash([4,4]); ctx2.stroke(); ctx2.restore();
+          }
+          var yThr = -Math.log10(0.05);
+          if (ysc.min <= yThr && yThr <= ysc.max) {
+            var ypx = ysc.getPixelForValue(yThr);
+            ctx2.save(); ctx2.beginPath(); ctx2.moveTo(ca.left, ypx); ctx2.lineTo(ca.right, ypx);
+            ctx2.strokeStyle = '#F59E0B'; ctx2.lineWidth = 1; ctx2.setLineDash([4,4]); ctx2.stroke(); ctx2.restore();
+          }
+        }
+      }]
+    });
+  }, 100);
+}
+
+// ── Heatmap ───────────────────────────────────────────────────────────────────
+
+function initHeatmap() {
+  var probes = {};
+  for (var i = 0; i < experiments.length; i++) if (experiments[i].probe_type) probes[experiments[i].probe_type] = 1;
+  var opts = '<option value="">All probes</option>';
+  Object.keys(probes).forEach(function(p) { opts += '<option value="' + p + '">' + p + '</option>'; });
+  document.getElementById('hpr').innerHTML = opts;
+  if (experiments.length) drawHeatmap();
+}
+
+function drawHeatmap() {
+  var n = parseInt(document.getElementById('hn').value) || 40;
+  var probe = document.getElementById('hpr').value;
+  var sortBy = document.getElementById('hso').value;
+
+  var filtExps = probe ? experiments.filter(function(e) { return e.probe_type === probe; }) : experiments;
+  if (!filtExps.length) {
+    document.getElementById('hmc').innerHTML = '<div class="card" style="padding:3rem;text-align:center;color:var(--fa)">No experiments match the selected probe type</div>';
+    return;
+  }
+
+  var cols = [];
+  for (var i = 0; i < filtExps.length; i++) {
+    for (var c = 0; c < filtExps[i].compounds.length; c++) {
+      cols.push({exp: filtExps[i], cpd: filtExps[i].compounds[c]});
+    }
+  }
+
+  var pmap = {};
+  for (var i = 0; i < filtExps.length; i++) {
+    for (var j = 0; j < filtExps[i].proteins.length; j++) {
+      var p = filtExps[i].proteins[j];
+      if (!pmap[p.uid]) pmap[p.uid] = {uid:p.uid, gene:p.gene, name:p.name, bestR:null};
+      if (p.minR != null && (pmap[p.uid].bestR === null || p.minR < pmap[p.uid].bestR)) pmap[p.uid].bestR = p.minR;
+    }
+  }
+
+  var prots = Object.values(pmap);
+  if (sortBy === 'best') prots.sort(function(a,b) { return (a.bestR||999) - (b.bestR||999); });
+  else prots.sort(function(a,b) { return (a.gene||a.uid).localeCompare(b.gene||b.uid); });
+  prots = prots.slice(0, n);
+
+  var lookup = {};
+  for (var i = 0; i < filtExps.length; i++) {
+    for (var j = 0; j < filtExps[i].proteins.length; j++) {
+      var p = filtExps[i].proteins[j];
+      if (!lookup[p.uid]) lookup[p.uid] = {};
+      if (!lookup[p.uid][filtExps[i].id]) lookup[p.uid][filtExps[i].id] = {};
+      for (var c = 0; c < filtExps[i].compounds.length; c++) {
+        var cpd = filtExps[i].compounds[c];
+        lookup[p.uid][filtExps[i].id][cpd] = p.tmt[cpd] ? p.tmt[cpd].ratio : null;
+      }
+    }
+  }
+
+  var hdr = '<tr><th style="font-size:11px;white-space:nowrap;min-width:80px;position:sticky;left:0;background:var(--bg);z-index:5">Protein</th>';
+  for (var c = 0; c < cols.length; c++) {
+    var fn = (cols[c].exp.filename || cols[c].exp.name);
+    hdr += '<th style="font-size:10px;text-align:center;padding:4px;writing-mode:vertical-rl;max-width:36px;white-space:nowrap;color:var(--mu)">'
+      + fn.slice(0, 14) + '<br/><span style="color:var(--br);font-weight:700">' + cols[c].cpd + '</span></th>';
+  }
+  hdr += '</tr>';
+
+  var bodyRows = '';
+  for (var i = 0; i < prots.length; i++) {
+    var pr = prots[i];
+    bodyRows += '<tr><td style="font-size:12px;white-space:nowrap;padding:4px 8px;position:sticky;left:0;background:var(--s);z-index:4;border-right:1px solid var(--bo)">'
+      + '<span style="font-weight:600">' + (pr.gene || pr.uid) + '</span><br/>'
+      + '<span class="uid" style="font-size:10px">' + pr.uid + '</span></td>';
+    for (var c = 0; c < cols.length; c++) {
+      var r = lookup[pr.uid] && lookup[pr.uid][cols[c].exp.id] ? lookup[pr.uid][cols[c].exp.id][cols[c].cpd] : null;
+      var rc2 = ratioColor(r);
+      var lbl = r != null ? r.toFixed(2) : '\u2014';
+      bodyRows += '<td style="padding:2px;text-align:center">'
+        + '<div class="hmcell" style="background:' + rc2.bg + ';color:' + rc2.txt + '" '
+        + 'title="' + (pr.gene || pr.uid) + ': ratio=' + lbl + '" '
+        + 'onclick="activeUid=\'' + pr.uid + '\';go(\'prot\')">' + lbl + '</div></td>';
+    }
+    bodyRows += '</tr>';
+  }
+
+  document.getElementById('hmc').innerHTML = '<div style="overflow:auto;max-height:600px">'
+    + '<table style="border-collapse:separate;border-spacing:2px">'
+    + '<thead style="position:sticky;top:0;background:var(--bg);z-index:10">' + hdr + '</thead>'
+    + '<tbody>' + bodyRows + '</tbody></table></div>';
+}
+
+// ── Users ─────────────────────────────────────────────────────────────────────
+
+function renderUsers() {
+  var html = '';
+  for (var i = 0; i < LAB_USERS.length; i++) {
+    var u = LAB_USERS[i];
+    var ue = experiments.filter(function(e) { return e.submitted_by === u.name; });
+    var lastTs = 0;
+    for (var j = 0; j < ue.length; j++) if (ue[j].ts > lastTs) lastTs = ue[j].ts;
+    html += '<tr>'
+      + '<td><div class="av">' + initials(u.name) + '</div></td>'
+      + '<td style="font-weight:500">' + u.name + '</td>'
+      + '<td><a href="mailto:' + u.email + '" style="color:var(--br);text-decoration:none;font-size:13px">' + u.email + '</a></td>'
+      + '<td style="font-size:13px;color:var(--mu)">' + (ue.length ? ue.length + ' exp' + (ue.length !== 1 ? 's' : '') : '<span style="color:var(--fa)">None yet</span>') + '</td>'
+      + '<td style="font-size:12px;color:var(--fa)">' + (lastTs ? dateStr(lastTs) : '\u2014') + '</td>'
+      + '</tr>';
+  }
+  document.getElementById('ut').innerHTML = html;
+}
+
+// ── Email modal ───────────────────────────────────────────────────────────────
+
+function openEmail(expId) {
+  emailExpId = expId;
+  var exp = experiments.filter(function(e) { return e.id === expId; })[0];
+  if (!exp) return;
+  var mis = getMissing(exp);
+  document.getElementById('emfn').textContent = exp.filename || exp.name;
+  var ui = exp.submitted_by ? LAB_USERS.findIndex(function(u) { return u.name === exp.submitted_by; }) : -1;
+  document.getElementById('ems').value = ui >= 0 ? String(ui) : '';
+  document.getElementById('emml').innerHTML = mis.length
+    ? '<div><div style="font-size:12px;font-weight:600;color:var(--mu);margin-bottom:6px">Missing fields</div><div>' + mis.map(function(f) { return '<span class="fp">' + f + '</span>'; }).join('') + '</div></div>'
+    : '<div class="ok" style="margin-bottom:.5rem">\u2713 No missing fields</div>';
+  updateEmailPreview();
+  document.getElementById('mob').style.display = 'flex';
+}
+
+function closeEmail() { document.getElementById('mob').style.display = 'none'; emailExpId = null; }
+
+function updateEmailPreview() {
+  var exp = experiments.filter(function(e) { return e.id === emailExpId; })[0];
+  if (!exp) return;
+  var mis = getMissing(exp);
+  var ui = document.getElementById('ems').value;
+  var u = ui !== '' ? LAB_USERS[parseInt(ui)] : null;
+  var fn = u ? u.name.split(' ')[0] : 'there';
+  var body = 'Hi ' + fn + ',\n\nThe following metadata fields are missing for your experiment:\n\nFile: ' + (exp.filename || exp.name) + '\n\nMissing fields:\n' + mis.map(function(f) { return '  \u2022 ' + f; }).join('\n') + '\n\nPlease reply with the missing information.\n\nThanks!\nSkynet';
+  document.getElementById('empr').style.display = 'block';
+  document.getElementById('empr').textContent = body;
+}
+
+function sendEmail() {
+  var exp = experiments.filter(function(e) { return e.id === emailExpId; })[0];
+  if (!exp) return;
+  var mis = getMissing(exp);
+  var ui = document.getElementById('ems').value;
+  var u = ui !== '' ? LAB_USERS[parseInt(ui)] : null;
+  var to = u ? u.email : '';
+  var fn = u ? u.name.split(' ')[0] : 'there';
+  var sub = encodeURIComponent('Skynet: Missing metadata \u2014 ' + (exp.filename || exp.name));
+  var body = encodeURIComponent('Hi ' + fn + ',\n\nMissing fields:\n' + mis.map(function(f) { return '  \u2022 ' + f; }).join('\n') + '\n\nFile: ' + (exp.filename || exp.name) + '\n\nThanks!\nSkynet');
+  window.open('mailto:' + to + '?subject=' + sub + '&body=' + body);
+}
+
+function copyEmailText() {
+  var txt = document.getElementById('empr').textContent;
+  navigator.clipboard.writeText(txt).then(function() {
+    var btn = document.getElementById('copyEmailBtn');
+    btn.textContent = '\u2713 Copied!';
+    setTimeout(function() { btn.textContent = '\ud83d\udccb Copy text'; }, 2000);
+  }).catch(function() { alert(txt); });
+}
+
+// ── Wire up all event listeners after DOM ready ───────────────────────────────
+
+document.addEventListener('DOMContentLoaded', function() {
+  // Launch
+  document.getElementById('launchBtn').addEventListener('click', launch);
+
+  // Nav tabs
+  document.getElementById('tab-dash').addEventListener('click', function() { go('dash'); });
+  document.getElementById('tab-up').addEventListener('click', function() { go('up'); });
+  document.getElementById('tab-qry').addEventListener('click', function() { go('qry'); });
+  document.getElementById('tab-exps').addEventListener('click', function() { go('exps'); });
+  document.getElementById('tab-anlys').addEventListener('click', function() { go('anlys'); });
+  // hmap merged into anlys
+  document.getElementById('tab-usrs').addEventListener('click', function() { go('usrs'); });
+
+  // Reset
+  document.getElementById('resetBtn').addEventListener('click', function() {
+    if (confirm('Reset session and clear all data?')) { experiments = []; go('dash'); }
+  });
+
+  // Dashboard buttons
+  document.getElementById('dashUploadBtn').addEventListener('click', function() { go('up'); });
+  document.getElementById('allExpsBtn').addEventListener('click', function() { go('exps'); });
+
+  // Upload page
+  var dz = document.getElementById('dz');
+  dz.addEventListener('click', function() { document.getElementById('fi').click(); });
+  dz.addEventListener('dragover', function(e) { e.preventDefault(); dz.classList.add('drag'); });
+  dz.addEventListener('dragleave', function() { dz.classList.remove('drag'); });
+  dz.addEventListener('drop', function(e) { e.preventDefault(); dz.classList.remove('drag'); handleFileDrop(e); });
+  document.getElementById('fi').addEventListener('change', function() { handleFile(this.files[0]); });
+  document.getElementById('uu').addEventListener('change', updateUserEmail);
+  document.getElementById('us').addEventListener('click', doUpload);
+  document.getElementById('cancelUpBtn').addEventListener('click', function() { go('exps'); });
+
+  // Back buttons
+  document.getElementById('backToExpsBtn').addEventListener('click', function() { go('exps'); });
+  document.getElementById('backToQryBtn').addEventListener('click', function() { go('qry'); });
+
+  // Experiments page
+  document.getElementById('expsUpBtn').addEventListener('click', function() { go('up'); });
+
+  // Query
+  document.getElementById('qt').addEventListener('input', doQuery);
+  document.getElementById('qp').addEventListener('change', doQuery);
+  document.getElementById('qu2').addEventListener('change', doQuery);
+  document.getElementById('qr').addEventListener('change', doQuery);
+
+  // Volcano
+  document.getElementById('ve').addEventListener('change', populateVolcCpds);
+  document.getElementById('vc').addEventListener('change', drawVolcano);
+  document.getElementById('vrt').addEventListener('change', drawVolcano);
+  document.getElementById('drawVolcBtn').addEventListener('click', drawVolcano);
+
+  // Heatmap
+  document.getElementById('drawHmBtn').addEventListener('click', drawHeatmap);
+
+  // Email modal
+  document.getElementById('mob').addEventListener('click', function(e) { if (e.target === this) closeEmail(); });
+  document.getElementById('closeEmailBtn').addEventListener('click', closeEmail);
+  document.getElementById('ems').addEventListener('change', updateEmailPreview);
+  document.getElementById('openEmailBtn').addEventListener('click', sendEmail);
+  document.getElementById('copyEmailBtn').addEventListener('click', copyEmailText);
+});
+
+</script>
+</body>
+</html>
