@@ -573,6 +573,16 @@ function launch() {
   supa.auth.onAuthStateChange(function(event, session) {
     _session = session;
     if (session) {
+      // If arriving from an invite link, prompt to set a password
+      if (event === 'SIGNED_IN' && window.location.hash.includes('type=invite')) {
+        window.history.replaceState(null, '', window.location.pathname);
+        var newPass = prompt('Welcome to Skynet! Please set your password:');
+        if (newPass && newPass.length >= 6) {
+          supa.auth.updateUser({password: newPass}).then(function(r) {
+            if (r.error) alert('Password update failed: ' + r.error.message);
+          });
+        }
+      }
       document.getElementById('wlc').style.display='none';
       document.getElementById('app').style.display='block';
       document.getElementById('nav-user').textContent=session.user.email.replace('@utexas.edu','');
@@ -1928,8 +1938,8 @@ function copyEmailText() {
 // ── Wire up all event listeners after DOM ready ───────────────────────────────
 
 document.addEventListener('DOMContentLoaded', function() {
-  // Launch
-  document.getElementById('launchBtn').addEventListener('click', launch);
+  // Auto-initialize on page load (handles magic link tokens in URL hash)
+  launch();
 
   // Nav tabs
   document.getElementById('tab-dash').addEventListener('click', function() { go('dash'); });
