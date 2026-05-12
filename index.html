@@ -934,13 +934,15 @@ async function doUpload() {
   if (saveBtn) saveBtn.disabled = true;
   if (fmEl)   fmEl.innerHTML = '';
 
+  var _dbg = 'start';
   try {
-    var userIdx = document.getElementById('uu').value;
-    var user    = userIdx !== '' ? LAB_USERS[parseInt(userIdx)] : null;
-    var pb = gv('upb'), pc = gv('upc'), pt = gv('upt'), px = gv('upx');
-    var pl = pb + (pc||pt||px ? ' ('+ [pc,pt,px].filter(Boolean).join(', ') +')' : '');
-    var baseFilename = gv('ufn');
-    var multiSheet   = parsedFile.length > 1;
+    _dbg='userIdx'; var userIdx = document.getElementById('uu') ? document.getElementById('uu').value : '';
+    _dbg='user';    var user    = userIdx !== '' ? LAB_USERS[parseInt(userIdx)] : null;
+    _dbg='pb/pc';   var pb = gv('upb'), pc = gv('upc'), pt = gv('upt'), px = gv('upx');
+    _dbg='pl';      var pl = pb + (pc||pt||px ? ' ('+ [pc,pt,px].filter(Boolean).join(', ') +')' : '');
+    _dbg='filename';var baseFilename = gv('ufn');
+    _dbg='parsedFile check'; alert('parsedFile type: '+typeof parsedFile+', isArray: '+Array.isArray(parsedFile)+', length: '+(parsedFile?parsedFile.length:'null'));
+    _dbg='multiSheet';var multiSheet   = parsedFile.length > 1;
     var lastExpId    = null;
     var instr = (document.getElementById('uin') && document.getElementById('uin').value === 'Other')
       ? (document.getElementById('uin-other') ? document.getElementById('uin-other').value.trim() : '')
@@ -1047,7 +1049,7 @@ async function doUpload() {
     else { activeExpId = lastExpId; go('exp'); }
 
   } catch(err) {
-    alert('UNEXPECTED ERROR:\n' + (err ? err.message : 'unknown') + '\n\nPlease screenshot this.');
+    alert('UNEXPECTED ERROR at step: ' + _dbg + '\n' + (err ? err.message : 'unknown') + '\n\nPlease screenshot this.');
     console.error('doUpload error:', err);
     if (saveBtn) { saveBtn.textContent = 'Upload & save'; saveBtn.disabled = false; }
   }
