@@ -272,7 +272,7 @@ td{padding:9px 12px;font-size:13px;border-bottom:1px solid #F8F7F3;vertical-alig
     <div class="card" style="overflow:hidden"><table><thead><tr><th></th><th>Name</th><th>Email</th><th>Experiments</th><th>Last upload</th></tr></thead><tbody id="ut"></tbody></table></div>
   </div>
 
-  <div style="text-align:center;font-size:11px;color:var(--fa);padding:1.5rem 0 2rem">Skynet &middot; Hsu Lab &middot; Session mode &middot; IP confidential</div>
+  <div style="text-align:center;font-size:11px;color:var(--fa);padding:1.5rem 0 2rem">Skynet &middot; Hsu Lab &middot; Persistent mode &middot; IP confidential</div>
 </div>
 
 <div id="mob" class="mo-wrap" onclick="if(event.target===this)closeEmail()">
@@ -368,7 +368,7 @@ async function loadExperimentsFromDB() {
       treat_conc:e.treat_conc||'', treat_time:e.treat_time||'',
       treat_type:e.treat_type||'', treat_media:e.treat_media||'',
       lysis:e.lysis||'', cell_line:e.cell_line||'', instrument:e.instrument||'',
-      compounds:e.compounds||[], proteins:[],
+      compounds:Array.isArray(e.compounds)?e.compounds:(e.compounds?[e.compounds]:[]), proteins:[],
       _proteinCount:e.protein_count||0, _engagedCount:e.engaged_count||0 };
   });
   renderDash();
@@ -1296,6 +1296,10 @@ async function renderExpDetail() {
   var exp = await ensureProteins(activeExpId);
   if (!exp) { document.getElementById('ed').innerHTML = '<p>Not found.</p>'; return; }
   if (exp.type === 'labelfree') { renderLFDetail(exp); return; }
+  // Rebuild compounds list from protein tmt keys if it was lost during DB round-trip
+  if (exp.type === 'tmt' && (!exp.compounds || !exp.compounds.length) && exp.proteins.length > 0) {
+    exp.compounds = Object.keys(exp.proteins[0].tmt || {});
+  }
 
   var mis = getMissing(exp);
   var hits = exp.proteins.filter(function(p) { return p.minR != null && p.minR <= 0.6; }).length;
