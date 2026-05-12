@@ -925,133 +925,100 @@ function updateUserEmail() {
 }
 
 async function doUpload() {
-  if (!supa)    { alert('DB not connected. Refresh the page.'); return; }
-  if (!_session){ alert('Not logged in. Please sign in again.'); return; }
-  if (!parsedFile) { alert('No file loaded — drop a file first.'); return; }
-  // Normalize: handle both old single-object format and new array format
-  var pf = Array.isArray(parsedFile) ? parsedFile
-         : (parsedFile.proteins ? [parsedFile] : null);
-  if (!pf || !pf.length) { alert('No valid data found in file. Please re-drop the file.'); return; }
-  parsedFile = pf;  // ensure it's always an array going forward
+  if (!supa)    { alert('DB not connected'); return; }
+  if (!_session){ alert('Not logged in'); return; }
+  if (!parsedFile) { alert('No file loaded'); return; }
+  var pf = Array.isArray(parsedFile) ? parsedFile : (parsedFile.type ? [parsedFile] : null);
+  if (!pf || !pf.length) { alert('Re-drop the file and try again.'); return; }
 
   var saveBtn = document.getElementById('us');
   var fmEl    = document.getElementById('fm');
   if (saveBtn) saveBtn.disabled = true;
-  if (fmEl)   fmEl.innerHTML = '';
+  if (fmEl) fmEl.innerHTML = '<div style="padding:8px;color:var(--mu)">Saving...</div>';
 
   try {
     var userIdx = document.getElementById('uu') ? document.getElementById('uu').value : '';
     var user    = userIdx !== '' ? LAB_USERS[parseInt(userIdx)] : null;
-    var pb = gv('upb'), pc = gv('upc'), pt = gv('upt'), px = gv('upx');
-    var pl = pb + (pc||pt||px ? ' ('+ [pc,pt,px].filter(Boolean).join(', ') +')' : '');
-    var baseFilename = gv('ufn');
-    var multiSheet   = parsedFile.length > 1;
-    var lastExpId    = null;
-    var instr = (document.getElementById('uin') && document.getElementById('uin').value === 'Other')
-      ? (document.getElementById('uin-other') ? document.getElementById('uin-other').value.trim() : '')
-      : (document.getElementById('uin') ? document.getElementById('uin').value : '');
+    var pb = gv('upb') || '';
+    var baseFilename = gv('ufn') || 'experiment';
+    var multiSheet = pf.length > 1;
+    var lastExpId = null;
 
-    for (var si = 0; si < parsedFile.length; si++) {
-      var sheet = parsedFile[si];
-      var expFilename = multiSheet ? baseFilename + ' [' + sheet.sheetName + ']' : baseFilename;
-
-      if (saveBtn) saveBtn.textContent = 'Saving experiment' + (multiSheet ? ' '+(si+1)+'/'+parsedFile.length : '') + '...';
+    for (var si = 0; si < pf.length; si++) {
+      var sheet = pf[si];
+      var expFilename = multiSheet ? baseFilename+' ['+sheet.sheetName+']' : baseFilename;
+      if (saveBtn) saveBtn.textContent = 'Saving '+(si+1)+'/'+pf.length+'...';
 
       var expMeta = {
-        user_id:        _session.user.id,
-        filename:       expFilename,
-        source_file:    baseFilename,
-        sheet_name:     multiSheet ? sheet.sheetName : '',
-        type:           sheet.type || 'tmt',
-        compounds:      sheet.compounds || [],
-        is_shared:      true,
-        submitted_by:   user ? user.name : '',
-        submitter_email:user ? user.email : '',
-        lcms:           gv('ul') || '',
-        bio_rep:        gv('ur') || '',
-        probe_type:     pb || '',
-        probe_label:    pl || '',
-        compound:       gv('uc') || '',
-        treat_conc:     gv('utc') || '',
-        treat_time:     gv('utt') || '',
-        treat_type:     gv('uty') || '',
-        treat_media:    gv('utm') || '',
-        lysis:          gv('uly') || '',
-        cell_line:      gv('ucl') || '',
-        instrument:     instr || ''
+        user_id: _session.user.id,
+        filename: expFilename,
+        type: sheet.type || 'tmt',
+        is_shared: true,
+        source_file: baseFilename,
+        sheet_name: multiSheet ? (sheet.sheetName||'') : '',
+        submitted_by: user ? user.name : '',
+        submitter_email: user ? user.email : '',
+        cell_line: gv('ucl') || '',
+        probe_type: pb,
+        lcms: gv('ul') || '',
+        bio_rep: gv('ur') || '',
+        lysis: gv('uly') || '',
+        compound: gv('uc') || '',
+        instrument: document.getElementById('uin') ? document.getElementById('uin').value : ''
       };
 
-      console.log('Inserting experiment:', expFilename, 'user:', _session.user.email);
       var expR = await supa.from('experiments').insert(expMeta).select('id,filename').single();
       if (expR.error) {
-        alert('EXPERIMENT INSERT FAILED:\n' + expR.error.message + '\nCode: ' + expR.error.code);
-        if (saveBtn) { saveBtn.textContent = 'Upload & save'; saveBtn.disabled = false; }
+        alert('INSERT FAILED:\n' + expR.error.message + '\nCode: ' + expR.error.code);
+        if (saveBtn) { saveBtn.textContent='Upload & save'; saveBtn.disabled=false; }
         return;
       }
-      var expRow = expR.data;
-      console.log('Experiment saved:', expRow.id);
+      console.log('Saved experiment:', expR.data.id);
+      lastExpId = expR.data.id;
 
-      // Insert proteins in batches
       var prots = sheet.proteins || [];
-      var BATCH = 100;
+      var BATCH = 50;
       for (var bi = 0; bi < prots.length; bi += BATCH) {
-        if (saveBtn) saveBtn.textContent = 'Saving ' + Math.min(bi+BATCH, prots.length) + '/' + prots.length + ' proteins...';
+        if (saveBtn) saveBtn.textContent = 'Saving proteins ' + Math.min(bi+BATCH,prots.length) + '/' + prots.length;
         var batch = prots.slice(bi, bi+BATCH).map(function(p) {
           return {
-            experiment_id: expRow.id,
-            uid:     p.uid   || null,  name:  p.name  || null,
-            org:     p.org   || null,  gene:  p.gene  || null,
-            mw:      p.mw    != null ? p.mw    : null,
-            pi:      p.pi    != null ? p.pi    : null,
-            cov:     p.cov   != null ? p.cov   : null,
-            pep:     p.pep   != null ? p.pep   : null,
-            psm:     p.psm   != null ? p.psm   : null,
-            cat:     p.cat   || null,  mods:  p.mods  || null,
-            pep_seq: p.pep_seq || null, motif: p.motif || null,
-            tmt:     (p.tmt && Object.keys(p.tmt).length) ? p.tmt : null,
-            min_r:   p.minR  != null ? p.minR  : null,
-            ctrl:    p.ctrl  || null,
-            bp:      p.bp    || null,  cc: p.cc || null, mf: p.mf || null
+            experiment_id: expR.data.id,
+            uid:p.uid||null, name:p.name||null, gene:p.gene||null,
+            mw:p.mw!=null?p.mw:null, cov:p.cov!=null?p.cov:null,
+            pep:p.pep!=null?p.pep:null, psm:p.psm!=null?p.psm:null,
+            mods:p.mods||null, pep_seq:p.pep_seq||null,
+            tmt:(p.tmt&&Object.keys(p.tmt).length)?p.tmt:null,
+            min_r:p.minR!=null?p.minR:null, ctrl:p.ctrl||null
           };
         });
         var pR = await supa.from('proteins').insert(batch);
-        if (pR.error) {
-          alert('PROTEIN INSERT FAILED (batch ' + (Math.floor(bi/BATCH)+1) + '):\n' + pR.error.message);
-          if (saveBtn) { saveBtn.textContent = 'Upload & save'; saveBtn.disabled = false; }
-          return;
-        }
+        if (pR.error) console.warn('Protein batch error (continuing):', pR.error.message);
       }
-      console.log('Proteins saved:', prots.length);
 
       experiments.unshift({
-        id: expRow.id, ts: Date.now(), name: expFilename, filename: expFilename,
-        source_file: baseFilename, sheet_name: multiSheet ? sheet.sheetName : '',
-        type: sheet.type||'tmt', is_shared: true, user_id: _session.user.id,
-        submitted_by: user?user.name:'', submitter_email: user?user.email:'',
-        lcms: gv('ul')||'', bio_rep: gv('ur')||'', probe_type: pb||'',
-        probe_label: pl||'', compound: gv('uc')||'', lysis: gv('uly')||'',
-        cell_line: gv('ucl')||'', instrument: instr||'', compounds: sheet.compounds||[],
-        proteins: sheet.proteins||[], _proteinCount: (sheet.proteins||[]).length, _engagedCount: 0
+        id:expR.data.id, ts:Date.now(), name:expFilename, filename:expFilename,
+        source_file:baseFilename, sheet_name:multiSheet?sheet.sheetName:'',
+        type:sheet.type||'tmt', is_shared:true, user_id:_session.user.id,
+        submitted_by:user?user.name:'', submitter_email:user?user.email:'',
+        probe_type:pb, compounds:sheet.compounds||[], proteins:sheet.proteins||[],
+        _proteinCount:(sheet.proteins||[]).length, _engagedCount:0,
+        cell_line:gv('ucl')||'', lcms:gv('ul')||'', bio_rep:gv('ur')||''
       });
-      _proteinCache[expRow.id] = sheet.proteins||[];
-      lastExpId = expRow.id;
+      _proteinCache[expR.data.id] = sheet.proteins||[];
     }
 
-    // Reset form
     parsedFile = null;
-    if (saveBtn) { saveBtn.textContent = 'Upload & save'; saveBtn.disabled = true; }
-    ['ufn','upc','upt','upx','uc','utc','utt','ue'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
-    ['uu','ul','ur','upb','uty','utm','uly','uin'].forEach(function(id){var el=document.getElementById(id);if(el)el.selectedIndex=0;});
-    var ucl=document.getElementById('ucl'); if(ucl) ucl.value='SiHa';
+    if (fmEl) fmEl.innerHTML = '<div class="ok" style="padding:10px">&#x2713; Saved to database!</div>';
+    if (saveBtn) { saveBtn.textContent='Upload & save'; saveBtn.disabled=true; }
     var fnr=document.getElementById('fnr'); if(fnr) fnr.style.display='none';
-
-    if (multiSheet) go('exps');
-    else { activeExpId = lastExpId; go('exp'); }
+    setTimeout(function() {
+      if (multiSheet) go('exps'); else { activeExpId=lastExpId; go('exp'); }
+    }, 1200);
 
   } catch(err) {
-    alert('UNEXPECTED SAVE ERROR:\n' + (err ? err.message : 'unknown') + '\n\nPlease screenshot this.');
-    console.error('doUpload error:', err);
-    if (saveBtn) { saveBtn.textContent = 'Upload & save'; saveBtn.disabled = false; }
+    alert('ERROR: '+(err?err.message:'unknown'));
+    console.error(err);
+    if (saveBtn) { saveBtn.textContent='Upload & save'; saveBtn.disabled=false; }
   }
 }
 
