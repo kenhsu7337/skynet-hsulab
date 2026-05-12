@@ -2122,6 +2122,7 @@ function copyEmailText() {
 // ── Wire up all event listeners after DOM ready ───────────────────────────────
 
 document.addEventListener('DOMContentLoaded', function() {
+  try {
   // Populate static dropdowns immediately (LAB_USERS doesn't need auth)
   populateDropdowns();
   // Auto-initialize Supabase (handles magic link tokens in URL hash)
@@ -2170,13 +2171,13 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('qr').addEventListener('change', doQuery);
 
   // Volcano
-  document.getElementById('ve').addEventListener('change', populateVolcCpds);
-  document.getElementById('vc').addEventListener('change', drawVolcano);
-  document.getElementById('vrt').addEventListener('change', drawVolcano);
-  document.getElementById('drawVolcBtn').addEventListener('click', drawVolcano);
+  var _ve=document.getElementById('ve'); if(_ve) _ve.addEventListener('change', populateVolcCpds);
+  var _vc=document.getElementById('vc'); if(_vc) _vc.addEventListener('change', drawVolcano);
+  var _vrt=document.getElementById('vrt'); if(_vrt) _vrt.addEventListener('change', drawVolcano);
+  var _dvb=document.getElementById('drawVolcBtn'); if(_dvb) _dvb.addEventListener('click', drawVolcano);
 
   // Heatmap
-  document.getElementById('drawHmBtn').addEventListener('click', drawHeatmap);
+  var _dhb=document.getElementById('drawHmBtn'); if(_dhb) _dhb.addEventListener('click', drawHeatmap);
 
   // Email modal
   document.getElementById('mob').addEventListener('click', function(e) { if (e.target === this) closeEmail(); });
@@ -2184,6 +2185,7 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('ems').addEventListener('change', updateEmailPreview);
   document.getElementById('openEmailBtn').addEventListener('click', sendEmail);
   document.getElementById('copyEmailBtn').addEventListener('click', copyEmailText);
+  } catch(e) { console.error('DOMContentLoaded error:', e.message, e); }
 });
 
 </script>
