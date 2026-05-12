@@ -608,9 +608,6 @@ function populateDropdowns() {
 
 function launch() {
   loadXLSX(); loadChart(null);
-  // Initialize EmailJS
-  if (window.emailjs) emailjs.init({publicKey: EMAILJS_KEY});
-
   supa = window.supabase.createClient(SUPA_URL, SUPA_KEY, {
     auth: {
       persistSession: true,
@@ -2048,7 +2045,7 @@ function openEmail(expId) {
   document.getElementById('emml').innerHTML = mis.length
     ? '<div><div style="font-size:12px;font-weight:600;color:var(--mu);margin-bottom:6px">Missing fields</div><div>' + mis.map(function(f) { return '<span class="fp">' + f + '</span>'; }).join('') + '</div></div>'
     : '<div class="ok" style="margin-bottom:.5rem">\u2713 No missing fields</div>';
-  updateEmailPreview();
+  setTimeout(updateEmailPreview, 50);
   document.getElementById('mob').style.display = 'flex';
 }
 
@@ -2082,8 +2079,14 @@ async function sendEmail() {
   var u = ui !== '' ? LAB_USERS[parseInt(ui)] : null;
   if (!u) { alert('Please select a lab member to send to.'); return; }
 
+  // Check EmailJS is loaded
+  if (typeof emailjs === 'undefined') {
+    alert('Email service not loaded. Please refresh the page and try again.');
+    return;
+  }
+
   var btn = document.getElementById('openEmailBtn');
-  btn.disabled = true; btn.textContent = 'Sending...';
+  btn.disabled = true; btn.textContent = 'Sending…';
 
   var det = [];
   if (exp.probe_type) det.push('Probe: ' + exp.probe_type);
@@ -2097,27 +2100,27 @@ async function sendEmail() {
     + '\n\nLog in at: https://skynet-hsulab.vercel.app\n\nThanks!\nKen Hsu Lab';
 
   try {
-    emailjs.init({publicKey: EMAILJS_KEY});
-    await emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, {
+    var result = await emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, {
       to_email:  u.email,
       subject:   'Skynet: Missing metadata — ' + (exp.filename || exp.name),
       message:   bodyText,
       reply_to:  _session ? _session.user.email : 'ken.hsu@austin.utexas.edu'
     });
-    btn.textContent = '✓ Sent!';
-    btn.style.background = 'var(--ok, #2E7D32)';
+    console.log('EmailJS success:', result);
+    btn.textContent = '✓ Sent to ' + u.name.split(' ')[0] + '!';
+    btn.style.background = '#2E7D32'; btn.style.color = '#fff';
     setTimeout(function() {
       btn.textContent = '὎7 Send email';
+      btn.style.background = ''; btn.style.color = '';
       btn.disabled = false;
-      btn.style.background = '';
       closeEmail();
-    }, 2000);
+    }, 2500);
   } catch(err) {
     console.error('EmailJS error:', err);
     btn.textContent = '὎7 Send email';
-    btn.disabled = false;
-    alert('Email failed: ' + (err.text || err.message || JSON.stringify(err))
-      + '\n\nCheck EmailJS dashboard for details.');
+    btn.style.background = ''; btn.disabled = false;
+    alert('Email failed to send.\nError: ' + (err.text || err.message || JSON.stringify(err))
+      + '\n\nCheck the EmailJS dashboard at emailjs.com for details.');
   }
 }
 
