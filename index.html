@@ -1983,7 +1983,9 @@ function copyEmailText() {
 // ── Wire up all event listeners after DOM ready ───────────────────────────────
 
 document.addEventListener('DOMContentLoaded', function() {
-  // Auto-initialize on page load (handles magic link tokens in URL hash)
+  // Populate static dropdowns immediately (LAB_USERS doesn't need auth)
+  populateDropdowns();
+  // Auto-initialize Supabase (handles magic link tokens in URL hash)
   launch();
 
   // Nav tabs
