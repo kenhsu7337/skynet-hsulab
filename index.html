@@ -111,7 +111,7 @@ td{padding:9px 12px;font-size:13px;border-bottom:1px solid #F8F7F3;vertical-alig
   </div>
   <div id="xb" class="wi" style="display:none;border-radius:0;border-left:none;border-right:none;border-top:none;text-align:center">&#x23F3; Loading Excel parser &mdash; requires internet connection&hellip;</div>
 
-  <div id="page-dash" class="pg on">
+  <div id="page-dash" class="pg on"><div id="db-diag"></div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem">
       <div><h2 style="font-size:20px;font-weight:700;margin:0 0 2px">Dashboard</h2><p style="font-size:13px;color:var(--mu);margin:0">Hsu Lab &middot; UT Austin</p></div>
       <button class="btn bp" id="dashUploadBtn">+ Upload experiment</button>
@@ -180,6 +180,8 @@ td{padding:9px 12px;font-size:13px;border-bottom:1px solid #F8F7F3;vertical-alig
     <div style="display:flex;justify-content:flex-end;gap:8px">
       <button class="btn" id="cancelUpBtn">Cancel</button>
       <button class="btn bp" id="us" disabled>&#x2B06; Upload &amp; save</button>
+      <button id="test-db-btn" class="btn bsm" onclick="testDB()" style="font-size:11px;margin-top:6px">&#x1F50C; Test DB connection</button>
+      <div id="test-db-out" style="font-size:11px;margin-top:4px"></div>
     </div>
   </div>
 
@@ -904,7 +906,8 @@ function updateUserEmail() {
 async function doUpload() {
   if (!supa) { alert('Database not connected. Please refresh the page.'); return; }
   if (!_session) { alert('Not logged in. Please sign in again.'); return; }
-  if (!parsedFile || !parsedFile.length) return;
+  if (!parsedFile || !parsedFile.length) { alert('No file loaded — please drop a file first.'); return; }
+  console.log('doUpload started: sheets='+parsedFile.length+', user='+_session.user.email);
   var userIdx = document.getElementById('uu').value;
   var user = userIdx !== '' ? LAB_USERS[parseInt(userIdx)] : null;
   var pb = gv('upb'), pc = gv('upc'), pt = gv('upt'), px = gv('upx');
@@ -1072,6 +1075,41 @@ async function toggleShare(expId) {
   exp.is_shared = newVal;
   renderExpDetail();
   renderExpList();
+}
+
+
+async function testDB() {
+  var btn = document.getElementById('test-db-btn');
+  var out = document.getElementById('test-db-out');
+  btn.disabled = true; btn.textContent = 'Testing...';
+  out.innerHTML = '';
+
+  // Step 1: check session
+  if (!supa)     { out.innerHTML='<span style="color:red">ERROR: Supabase client not initialized</span>'; btn.disabled=false; btn.textContent='Test DB'; return; }
+  if (!_session) { out.innerHTML='<span style="color:red">ERROR: Not logged in (_session is null)</span>'; btn.disabled=false; btn.textContent='Test DB'; return; }
+  out.innerHTML += '<div>&#x2713; Session: ' + _session.user.email + ' ('+_session.user.id.slice(0,8)+'...)</div>';
+
+  // Step 2: try INSERT
+  var testRow = { user_id: _session.user.id, filename: '__test__', type: 'tmt', is_shared: true };
+  var ins = await supa.from('experiments').insert(testRow).select().single();
+  if (ins.error) {
+    out.innerHTML += '<div style="color:red">ERROR inserting: ' + ins.error.message + ' (code:'+ins.error.code+')</div>';
+    btn.disabled=false; btn.textContent='Test DB'; return;
+  }
+  out.innerHTML += '<div>&#x2713; INSERT succeeded: id=' + ins.data.id + '</div>';
+
+  // Step 3: try SELECT back
+  var sel = await supa.from('experiments').select('id,filename').eq('id', ins.data.id).single();
+  if (sel.error || !sel.data) {
+    out.innerHTML += '<div style="color:orange">WARNING: INSERT worked but SELECT failed: ' + (sel.error?sel.error.message:'no data') + '</div>';
+  } else {
+    out.innerHTML += '<div>&#x2713; SELECT succeeded</div>';
+  }
+
+  // Step 4: cleanup
+  await supa.from('experiments').delete().eq('id', ins.data.id);
+  out.innerHTML += '<div style="color:green;font-weight:600">DB connection fully working!</div>';
+  btn.disabled=false; btn.textContent='Test DB';
 }
 
 function renderDash() {
