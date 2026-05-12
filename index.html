@@ -351,10 +351,14 @@ async function loadExperimentsFromDB() {
   }
   if (r.error) {
     console.error('Load error:', r.error);
+    // Try a simple ping to distinguish auth vs permissions error
+    var ping = await supa.from('experiments').select('count').limit(1);
+    var msg = ping.error
+      ? 'Permission denied — run skynet_fix.sql in Supabase SQL Editor. Error: ' + ping.error.message
+      : 'Could not load view — run skynet_fix.sql in Supabase SQL Editor. Error: ' + r.error.message;
     var pg = document.getElementById('page-dash');
     if (pg) pg.insertAdjacentHTML('afterbegin','<div class="er" style="margin:1rem">'
-      +'Could not load experiments: '+r.error.message
-      +'<br><small>Run the permissions SQL in Supabase and refresh.</small></div>');
+      + msg + '</div>');
     return;
   }
   experiments = (r.data||[]).map(function(e) {
@@ -878,7 +882,9 @@ function updateUserEmail() {
 }
 
 async function doUpload() {
-  if (!parsedFile || !parsedFile.length || !_session) return;
+  if (!supa) { alert('Database not connected. Please refresh the page.'); return; }
+  if (!_session) { alert('Not logged in. Please sign in again.'); return; }
+  if (!parsedFile || !parsedFile.length) return;
   var userIdx = document.getElementById('uu').value;
   var user = userIdx !== '' ? LAB_USERS[parseInt(userIdx)] : null;
   var pb = gv('upb'), pc = gv('upc'), pt = gv('upt'), px = gv('upx');
@@ -954,6 +960,13 @@ async function doUpload() {
     var ucl=document.getElementById('ucl'); if(ucl) ucl.value='SiHa';
     document.getElementById('fnr').style.display='none';
 
+    // Verify save worked with a quick read-back
+    var verify = await supa.from('experiments').select('id,filename').eq('id', lastExpId).single();
+    if (verify.error || !verify.data) {
+      fmEl.innerHTML = '<div class="er">Upload appeared to succeed but data cannot be read back. '
+        + 'Check Supabase permissions. Error: ' + (verify.error ? verify.error.message : 'not found') + '</div>';
+      return;
+    }
     if (multiSheet) { go('exps'); }
     else { activeExpId=lastExpId; go('exp'); }
 
