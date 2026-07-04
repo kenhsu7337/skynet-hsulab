@@ -1344,7 +1344,7 @@ function doQuery() {
       + '<td><span class="uid">' + p.uid + '</span></td>'
       + '<td><div style="font-size:13px;font-weight:600">' + (p.gene || p.uid) + '</div>'
       + '<div style="font-size:11px;color:var(--fa);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + p.name + '</div></td>'
-      + '<td style="color:var(--mu);font-size:12px">' + (p.cat || '\u2014') + '</td>'
+      + '<td style="font-size:12px">' + (x.entries.map(function(e){return e.exp.probe_type||'';}).filter(function(v,i,a){return v&&a.indexOf(v)===i;}).join(', ')||'\u2014') + '</td>'
       + '<td>' + (p.mw ? p.mw.toFixed(1) : '\u2014') + '</td>'
       + '<td style="font-weight:700;color:' + rcol(best) + '">' + (best != null ? best.toFixed(3) : '\u2014') + (best != null && best <= 0.6 ? '<span style="font-size:9px;margin-left:3px">\u25cf</span>' : '') + '</td>'
       + '<td>' + (best != null ? rbar(best) : '') + '</td>'
