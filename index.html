@@ -413,8 +413,10 @@ async function ensureProteins(expId) {
     document.getElementById('ed').innerHTML='<p style="color:#DC2626;padding:1rem">Failed to load: '+(r.error?r.error.message:'unknown')+'</p>';
     return null;
   }
-  exp.proteins=r.data.map(dbP);
-  _proteinCache[expId]=exp.proteins;
+  var prots = r.data.map(dbP);
+  // Annotate with UniProt for any missing gene/name (esp. PeptideIsoforms)
+  exp.proteins = await annotateProteinsFromUniprot(prots);
+  _proteinCache[expId] = exp.proteins;
   return exp;
 }
 
@@ -705,7 +707,7 @@ function parseRows(rows) {
   if (!cpds.length) return {proteins:[], compounds:[], error:'No TMT ratio columns found.', type:'unknown'};
 
   var aC  = findCol(H,'Accession','UniProt ID','Master Protein Accessions');
-  var dC  = findCol(H,'Description','Protein Description','Modifications','Modifications in Master Proteins','Annotated Sequence');
+  var dC  = findCol(H,'Description','Protein Description');  // only real description columns
   var cC  = findCol(H,'Coverage [%]','Coverage');
   var mC  = findCol(H,'Marked as','Category');
   var pC  = findCol(H,'# Peptides','Peptides','# PSMs');
@@ -728,10 +730,11 @@ function parseRows(rows) {
     if (!acc || acc.toLowerCase() === 'false') continue;
     var nd = parseName(row[dC]);
     // For site-level exports: enrich name with peptide/position if description is a modification string
-    if (!nd.name && pepC && row[pepC]) nd.name = String(row[pepC]).trim();
-    if (posC && row[posC] && nd.name && nd.name.length < 60) {
-      nd.name = nd.name + ' [' + String(row[posC]).split(/[;,]/)[0].trim() + ']';
-    }
+    // For PeptideIsoforms: name is the protein accession since no description is available
+    if (!nd.name) nd.name = acc;  // fallback to UniProt ID — better than peptide sequence
+    // Append position info for site-level data
+    var posStr = posC !== null ? String(row[posC] || '').split(/[;,]/)[0].trim() : '';
+    if (posStr) nd.name = acc + ' [' + posStr + ']';
     var tmt = {}, minR = null;
     for (var c = 0; c < cpds.length; c++) {
       var cpd = cpds[c];
@@ -810,11 +813,15 @@ function parseLFRows(rows, H) {
 
     var nd = parseName(row[dC]);
 
-    // Extract gene: prefer explicit Gene Symbol column, fall back to GN= in description
+    // Extract gene: explicit Gene Symbol col → GN= in description → blank
     var gene = gC ? String(row[gC] || '').trim() : '';
-    if (!gene && row[dC]) {
-      var gm = String(row[dC]).match(/\bGN=(\S+)/);
-      if (gm) gene = gm[1];
+    if (!gene && dC !== null && row[dC]) {
+      var rawDesc = String(row[dC]);
+      // Only parse GN= if this looks like a real protein description (has OS= or GN=)
+      if (rawDesc.indexOf('GN=') >= 0 || rawDesc.indexOf('OS=') >= 0) {
+        var gm = rawDesc.match(/\bGN=(\S+)/);
+        if (gm) gene = gm[1];
+      }
     }
 
     // Build modification/site label from available columns
@@ -874,7 +881,17 @@ function readExcel(file) {
           }
         }
         if (!results.length) { reject(new Error('No valid data found in any sheet. Check that the file has Abundance Ratio columns (TMT) or Accession/PSM columns (label-free).')); return; }
-        resolve(results);
+        // Annotate proteins with UniProt API for missing gene/name info
+        var allProteins = [];
+        results.forEach(function(r) { allProteins = allProteins.concat(r.proteins); });
+        annotateProteinsFromUniprot(allProteins).then(function(annotated) {
+          var idx = 0;
+          results.forEach(function(r) {
+            r.proteins = annotated.slice(idx, idx + r.proteins.length);
+            idx += r.proteins.length;
+          });
+          resolve(results);
+        }).catch(function() { resolve(results); });  // if API fails, still resolve
       } catch(err) { reject(err); }
     };
     reader.onerror = reject;
@@ -1183,6 +1200,79 @@ function toggleOtherProbe() {
   var inp = document.getElementById('upb-other');
   if (inp) inp.style.display = (sel && sel.value === 'Other') ? 'block' : 'none';
   if (inp && sel && sel.value !== 'Other') inp.value = '';
+}
+
+
+// ── UniProt API lookup ────────────────────────────────────────────────────────
+var _uniprotCache = {};  // uid → {gene, name, org}
+
+async function fetchUniprotAnnotations(uids) {
+  // Filter to only IDs we haven't cached yet
+  var toFetch = uids.filter(function(id) { return id && !_uniprotCache[id]; });
+  if (!toFetch.length) return;
+
+  // UniProt REST API supports up to 500 IDs per request
+  var BATCH = 200;
+  for (var i = 0; i < toFetch.length; i += BATCH) {
+    var batch = toFetch.slice(i, i + BATCH);
+    try {
+      var url = 'https://rest.uniprot.org/uniprotkb/accessions?accessions='
+        + batch.join(',')
+        + '&fields=accession,gene_names,protein_name,organism_name&format=json&size=' + batch.length;
+      var resp = await fetch(url);
+      if (!resp.ok) continue;
+      var data = await resp.json();
+      (data.results || []).forEach(function(entry) {
+        var uid = entry.primaryAccession;
+        // Gene name
+        var gene = '';
+        if (entry.genes && entry.genes.length) {
+          gene = (entry.genes[0].geneName && entry.genes[0].geneName.value) || '';
+        }
+        // Protein name
+        var name = '';
+        if (entry.proteinDescription) {
+          var rec = entry.proteinDescription.recommendedName || entry.proteinDescription.submissionNames && entry.proteinDescription.submissionNames[0];
+          if (rec && rec.fullName) name = rec.fullName.value;
+        }
+        // Organism
+        var org = entry.organism && entry.organism.scientificName ? entry.organism.scientificName : '';
+        _uniprotCache[uid] = {gene: gene, name: name, org: org};
+      });
+    } catch(e) {
+      console.warn('UniProt API batch failed:', e.message);
+    }
+  }
+}
+
+async function annotateProteinsFromUniprot(proteins) {
+  // Collect unique UIDs that are missing gene or name
+  var needsLookup = [];
+  var seen = {};
+  proteins.forEach(function(p) {
+    var uid = (p.uid || '').split(' ')[0].split('[')[0].trim();  // strip position suffixes
+    if (uid && !seen[uid] && (!p.gene || !p.name || p.name === uid || p.name.indexOf('[') === 0)) {
+      needsLookup.push(uid);
+      seen[uid] = true;
+    }
+  });
+  if (!needsLookup.length) return proteins;
+
+  await fetchUniprotAnnotations(needsLookup);
+
+  // Apply annotations
+  return proteins.map(function(p) {
+    var uid = (p.uid || '').split(' ')[0].split('[')[0].trim();
+    var ann = _uniprotCache[uid];
+    if (!ann) return p;
+    return Object.assign({}, p, {
+      gene: p.gene || ann.gene || p.gene,
+      name: (p.name === uid || !p.name || p.name.indexOf('[') === 0)
+            ? (ann.name || p.name)
+            : p.name,
+      org:  p.org  || ann.org
+    });
+  });
 }
 
 function renderDash() {
