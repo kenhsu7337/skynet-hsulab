@@ -156,7 +156,7 @@ td{padding:9px 12px;font-size:13px;border-bottom:1px solid #F8F7F3;vertical-alig
       </div>
       <div class="sc">2 &middot; Probe Used</div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:1rem">
-        <div><label class="lb">Probe</label><select id="upb" class="fc"><option value="">Select&hellip;</option><option>DBIA</option><option>FP</option><option>SuTEx</option><option>CEP</option><option>PhAzE</option><option>Other</option></select></div>
+        <div><label class="lb">Probe</label><select id="upb" class="fc" onchange="toggleOtherProbe()"><option value="">Select&hellip;</option><option>DBIA</option><option>FP</option><option>SuTEx</option><option>CEP</option><option>PhAzE</option><option>Other</option></select><input id="upb-other" class="fc" placeholder="Enter probe name…" style="display:none;margin-top:6px;width:100%"></div>
         <div><label class="lb">Concentration</label><input id="upc" class="fc" placeholder="500 &micro;M"></div>
         <div><label class="lb">Time</label><input id="upt" class="fc" placeholder="1 h"></div>
         <div><label class="lb">Temperature</label><input id="upx" class="fc" placeholder="RT"></div>
@@ -941,6 +941,10 @@ async function doUpload() {
     var userIdx = document.getElementById('uu') ? document.getElementById('uu').value : '';
     var user    = userIdx !== '' ? LAB_USERS[parseInt(userIdx)] : null;
     var pb = gv('upb') || '';
+    if (pb === 'Other') {
+      var pbOther = document.getElementById('upb-other');
+      pb = (pbOther && pbOther.value.trim()) ? pbOther.value.trim() : 'Other';
+    }
     var baseFilename = gv('ufn') || 'experiment';
     var multiSheet = pf.length > 1;
     var lastExpId = null;
@@ -1172,6 +1176,13 @@ async function sendFeedback() {
     if (btn) { btn.textContent = '\u1F4E7 Send'; btn.style.background = ''; btn.disabled = false; }
     alert('Could not send: ' + (err.text || err.message || JSON.stringify(err)));
   }
+}
+
+function toggleOtherProbe() {
+  var sel = document.getElementById('upb');
+  var inp = document.getElementById('upb-other');
+  if (inp) inp.style.display = (sel && sel.value === 'Other') ? 'block' : 'none';
+  if (inp && sel && sel.value !== 'Other') inp.value = '';
 }
 
 function renderDash() {
