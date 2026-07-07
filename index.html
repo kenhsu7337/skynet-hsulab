@@ -1268,8 +1268,9 @@ async function annotateProteinsFromUniprot(proteins) {
     if (!ann) return p;
     // Calculate binding site from peptide sequence + modifications
     var site = p.motif || '';  // keep existing if already set
-    if (!site && p.pep_seq && p.mods && ann.seq) {
-      site = calculateBindingSite(uid, p.pep_seq, p.mods) || '';
+    if (!site && p.pep_seq && ann.seq) {
+      site = calculateBindingSite(uid, p.pep_seq, p.mods || '') || '';
+      if (!site) console.log('Site calc failed:', uid, p.pep_seq && p.pep_seq.slice(0,20), p.mods && p.mods.slice(0,40));
     }
     return Object.assign({}, p, {
       gene:  p.gene || ann.gene || '',
@@ -1285,22 +1286,25 @@ async function annotateProteinsFromUniprot(proteins) {
 
 // ── Binding site calculation ─────────────────────────────────────────────────
 function stripPeptideFlank(annotated) {
-  // Remove flanking residues like [K].PEPTIDE.[R] → PEPTIDE
-  var m = annotated.match(/\.([A-Z]+)\./);
-  return m ? m[1] : annotated.replace(/[^A-Z]/g, '');
+  if (!annotated) return '';
+  var m = String(annotated).match(/[.\-\[\]A-Z]+\.([A-Z]+)\./i);
+  if (m) return m[1].toUpperCase();
+  return String(annotated).replace(/[^A-Za-z]/g, '').toUpperCase();
 }
 
-function parseModifiedPosition(modifications, peptideSeq) {
-  // Parse local position from modification string e.g.:
-  // "1xSuTExK [K7]" → {aa:'K', localPos:7}
-  // "1xSuTExY [Y11]" → {aa:'Y', localPos:11}
-  // "1xFP [S143]" → treat as absolute if > peptide length
-  var probePatterns = [/SuTEx[A-Z]\s*\[([A-Z])(\d+)\]/i, /FP.*?\[([A-Z])(\d+)\]/i,
-                       /CEP.*?\[([A-Z])(\d+)\]/i, /PhAzE.*?\[([A-Z])(\d+)\]/i,
-                       /DIA.*?\[([A-Z])(\d+)\]/i, /DBIA.*?\[([A-Z])(\d+)\]/i];
+function parseModifiedPosition(modifications) {
+  if (!modifications) return null;
+  var probePatterns = [
+    /SuTEx[A-Z]\s*\[([A-Z])(\d+)\]/i,
+    /\bFP\b[^\[]*\[([A-Z])(\d+)\]/i,
+    /\bCEP\b[^\[]*\[([A-Z])(\d+)\]/i,
+    /\bPhAzE\b[^\[]*\[([A-Z])(\d+)\]/i,
+    /\bDBIA\b[^\[]*\[([A-Z])(\d+)\]/i,
+    /\bDIA\b[^\[]*\[([A-Z])(\d+)\]/i
+  ];
   for (var i = 0; i < probePatterns.length; i++) {
     var m = modifications.match(probePatterns[i]);
-    if (m) return {aa: m[1], localPos: parseInt(m[2])};
+    if (m) return {aa: m[1].toUpperCase(), localPos: parseInt(m[2])};
   }
   return null;
 }
@@ -1326,7 +1330,7 @@ function calculateBindingSite(uid, annotatedPeptide, modifications) {
   var pepStart = startIdx + 1;  // 1-based
 
   // Get probe-modified residue local position
-  var modInfo = parseModifiedPosition(modifications || '', peptide);
+  var modInfo = parseModifiedPosition(modifications || '');
   if (!modInfo) return null;
 
   var absPos = pepStart + modInfo.localPos - 1;
@@ -1673,7 +1677,7 @@ async function renderExpDetail() {
       + '<td><span class="uid">' + p.uid + '</span></td>'
       + '<td><div style="font-size:13px;font-weight:600">' + (p.gene || '\u2014') + '</div>'
       + '<div style="font-size:11px;color:var(--fa);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + p.name + '</div></td>'
-      + '<td style="font-size:11px;color:var(--br);font-weight:600">' + (p.motif || '\\u2014') + '</td>'
+      + '<td style="font-size:11px;color:var(--br);font-weight:600">' + (p.motif || '—') + '</td>'
       + '<td style="color:var(--mu);font-size:12px">' + (p.cat || '\u2014') + '</td>'
       + '<td style="color:var(--mu);font-size:12px">' + (p.cov ? p.cov.toFixed(0) + '%' : '\u2014') + '</td>';
     for (var c = 0; c < exp.compounds.length; c++) {
