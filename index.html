@@ -1270,7 +1270,12 @@ async function annotateProteinsFromUniprot(proteins) {
     var site = p.motif || '';  // keep existing if already set
     if (!site && p.pep_seq && ann.seq) {
       site = calculateBindingSite(uid, p.pep_seq, p.mods || '') || '';
-      if (!site) console.log('Site calc failed:', uid, p.pep_seq && p.pep_seq.slice(0,20), p.mods && p.mods.slice(0,40));
+      if (!site) {
+        console.warn('Site calc failed for', uid,
+          '| pep_seq:', p.pep_seq ? p.pep_seq.slice(0,30) : 'EMPTY',
+          '| mods:', p.mods ? p.mods.slice(0,60) : 'EMPTY',
+          '| seq in cache:', ann.seq ? ann.seq.slice(0,10)+'...' : 'NO SEQ');
+      }
     }
     return Object.assign({}, p, {
       gene:  p.gene || ann.gene || '',
@@ -1676,7 +1681,7 @@ async function renderExpDetail() {
     html += '<tr class="hr" onclick="activeUid=\'' + p.uid + '\';go(\'prot\')">'
       + '<td><span class="uid">' + p.uid + '</span></td>'
       + '<td><div style="font-size:13px;font-weight:600">' + (p.gene || '\u2014') + '</div>'
-      + '<div style="font-size:11px;color:var(--fa);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + p.name + '</div></td>'
+      + '<div style="font-size:11px;color:var(--fa);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (p.mods ? p.mods.slice(0,40) : (p.name||'')) + '</div></td>'
       + '<td style="font-size:11px;color:var(--br);font-weight:600">' + (p.motif || '—') + '</td>'
       + '<td style="color:var(--mu);font-size:12px">' + (p.cat || '\u2014') + '</td>'
       + '<td style="color:var(--mu);font-size:12px">' + (p.cov ? p.cov.toFixed(0) + '%' : '\u2014') + '</td>';
