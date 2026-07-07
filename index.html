@@ -798,7 +798,7 @@ function parseLFRows(rows, H) {
   var mC  = findCol(H, 'Marked as', 'Category');
   // Sites export specific columns
   var pepC  = findCol(H, 'Peptide Sequence', 'Annotated Sequence', 'Sequence');
-  var modC  = findCol(H, 'Modification Name', 'Modifications', 'Modifications in Master Proteins');
+  var modC  = findCol(H, 'Modification Name', 'Modifications');  // NOTE: 'Modifications in Master Proteins' excluded — that column is often empty in PeptideIsoforms
   var aaC   = findCol(H, 'Target Amino Acid');
   var posC  = findCol(H, 'Position');
   var motC  = findCol(H, 'Motif');
