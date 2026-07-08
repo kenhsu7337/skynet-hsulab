@@ -773,26 +773,49 @@ function parseRows(rows) {
     var pepSeq = pepC ? String(row[pepC] || '').trim() : '';
     var mods   = modC ? String(row[modC] || '').trim() : '';
 
-    // Derive binding site directly from position column if available.
-    // "Positions in Master Proteins" format: "P09211 [1]" or "1" or "P09211 [1]; P09212 [4]"
+    // Derive binding site: site_pos = protein_start_pos + probe_offset_in_peptide - 1
+    // "Positions in Master Proteins": "P09211 [1]" or "1" or "P09211 [1]; P09212 [4]"
+    // "Annotated Sequence": e.g. "VPILGK[+272]FETLSYLCGR" — bracketed residue is the probe site
     var posRaw = posC !== null ? String(row[posC] || '').trim() : '';
     var motif = '';
     var dispPos = '';
     if (posRaw) {
+      // Extract protein start position (first number after optional accession)
       var pm = posRaw.match(/([A-Z][A-Z0-9]+)\s*\[(\d+)\]/i);
+      var proteinStartPos = null;
       if (pm) {
-        dispPos = pm[2];
-        var aa = (aaC && row[aaC]) ? String(row[aaC]).trim() : '';
-        motif = pm[1] + '_' + aa + pm[2];
+        proteinStartPos = parseInt(pm[2]);
       } else {
         var pnum = posRaw.match(/^(\d+)/);
-        if (pnum) {
-          dispPos = pnum[1];
-          var aa = (aaC && row[aaC]) ? String(row[aaC]).trim() : '';
-          motif = acc + '_' + aa + pnum[1];
-        }
+        if (pnum) proteinStartPos = parseInt(pnum[1]);
       }
-      if (dispPos) nd.name = acc + ' [' + dispPos + ']';
+
+      if (proteinStartPos !== null) {
+        // Find probe offset within the peptide from annotated sequence
+        // Format: "...K[+272]ETL..." — count residues (letters) before the bracket
+        var probeOffsetInPeptide = 0;
+        if (pepSeq) {
+          var stripped = pepSeq.replace(/^[^A-Z]*/,''); // remove leading decorators
+          // Walk the sequence counting amino acid letters until we hit a modification bracket
+          var lettersBeforeBracket = stripped.replace(/\[.*?\]/g, function(match, offset, str) {
+            // Check if this bracket contains a large mass shift (probe modification, not e.g. oxidation)
+            var mass = parseFloat(match.replace(/[^0-9.\-]/g,''));
+            if (Math.abs(mass) > 100) {
+              // Count only letters before this position
+              var before = str.substring(0, offset).replace(/[^A-Za-z]/g,'');
+              probeOffsetInPeptide = before.length;
+            }
+            return match;
+          });
+        }
+
+        var sitePos = proteinStartPos + probeOffsetInPeptide - 1;
+        // For the display name use the start pos (matches what PD already shows in the name col)
+        dispPos = String(proteinStartPos);
+        nd.name = acc + ' [' + dispPos + ']';
+        var gene = String(row[gC] || '').trim() || acc;
+        motif = gene + '_' + sitePos;
+      }
     }
 
     var tmt = {}, minR = null;
