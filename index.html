@@ -719,9 +719,11 @@ function parseRows(rows) {
   var bC  = findCol(H,'Biological Process');
   var ccC = findCol(H,'Cellular Component');
   var mfC = findCol(H,'Molecular Function');
-  // Site-level exports (PeptideIsoforms): position and peptide sequence
+  // Site-level exports (PeptideIsoforms): position, peptide sequence, modifications
   var pepC = findCol(H,'Annotated Sequence','Peptide Sequence');
   var posC = findCol(H,'Position in Protein','Positions in Master Proteins');
+  var modC = findCol(H,'Modifications in Master Proteins','Modifications','Modification Name');
+  var aaC  = findCol(H,'Target Amino Acid');
 
   var proteins = [];
   for (var r = 0; r < rows.length; r++) {
@@ -730,12 +732,34 @@ function parseRows(rows) {
     var acc = String(row[aC] || '').trim().split(/[;,]/)[0].trim();
     if (!acc || acc.toLowerCase() === 'false') continue;
     var nd = parseName(row[dC]);
-    // For site-level exports: enrich name with peptide/position if description is a modification string
-    // For PeptideIsoforms: name is the protein accession since no description is available
-    if (!nd.name) nd.name = acc;  // fallback to UniProt ID — better than peptide sequence
-    // Append position info for site-level data
-    var posStr = posC !== null ? String(row[posC] || '').split(/[;,]/)[0].trim() : '';
-    if (posStr) nd.name = acc + ' [' + posStr + ']';
+    if (!nd.name) nd.name = acc;  // fallback to UniProt ID
+
+    // Capture peptide sequence and modifications for site calculation
+    var pepSeq = pepC ? String(row[pepC] || '').trim() : '';
+    var mods   = modC ? String(row[modC] || '').trim() : '';
+
+    // Derive binding site directly from position column if available.
+    // "Positions in Master Proteins" format: "P09211 [1]" or "1" or "P09211 [1]; P09212 [4]"
+    var posRaw = posC !== null ? String(row[posC] || '').trim() : '';
+    var motif = '';
+    var dispPos = '';
+    if (posRaw) {
+      var pm = posRaw.match(/([A-Z][A-Z0-9]+)\s*\[(\d+)\]/i);
+      if (pm) {
+        dispPos = pm[2];
+        var aa = (aaC && row[aaC]) ? String(row[aaC]).trim() : '';
+        motif = pm[1] + '_' + aa + pm[2];
+      } else {
+        var pnum = posRaw.match(/^(\d+)/);
+        if (pnum) {
+          dispPos = pnum[1];
+          var aa = (aaC && row[aaC]) ? String(row[aaC]).trim() : '';
+          motif = acc + '_' + aa + pnum[1];
+        }
+      }
+      if (dispPos) nd.name = acc + ' [' + dispPos + ']';
+    }
+
     var tmt = {}, minR = null;
     for (var c = 0; c < cpds.length; c++) {
       var cpd = cpds[c];
@@ -748,7 +772,8 @@ function parseRows(rows) {
       mw: sf(row[wC]), pi: sf(row[iC]), cov: sf(row[cC]),
       pep: si(row[pC]), psm: si(row[sC]), cat: String(row[mC] || '').trim(),
       bp: String(row[bC]  || '').trim(), cc: String(row[ccC] || '').trim(),
-      mf: String(row[mfC] || '').trim(), tmt: tmt, minR: minR, ctrl: ctrl
+      mf: String(row[mfC] || '').trim(), tmt: tmt, minR: minR, ctrl: ctrl,
+      pep_seq: pepSeq, mods: mods, motif: motif
     });
   }
   proteins.sort(function(a,b) { return (a.minR||999) - (b.minR||999); });
