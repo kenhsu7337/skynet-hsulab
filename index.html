@@ -1995,6 +1995,14 @@ function renderProtDetail() {
   charts = {};
 
   var rep = entries[0].p;
+  // Collect distinct binding sites across all peptide/experiment entries for this protein
+  var siteSet = {};
+  entries.forEach(function(e) { if (e.p.motif) siteSet[e.p.motif] = 1; });
+  var sitesList = Object.keys(siteSet);
+  // Show just the position part (after the underscore) for compactness, joined if multiple
+  var sitesDisplay = sitesList.length
+    ? sitesList.map(function(m){ var idx = m.indexOf('_'); return idx >= 0 ? m.slice(idx+1) : m; }).join(', ')
+    : '\u2014';
   var cardsHtml = '';
   var canvasIds = [];
 
@@ -2047,8 +2055,9 @@ function renderProtDetail() {
     + '</div></div>'
     + '<a href="https://www.uniprot.org/uniprot/' + activeUid + '" target="_blank" style="font-size:12px;color:var(--br);text-decoration:none;border:1px solid var(--bo);border-radius:6px;padding:5px 12px">UniProt \u2197</a>'
     + '</div>'
-    + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.25rem">'
+    + '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:1.25rem">'
     + '<div class="st"><div class="sl">MW</div><div class="sv" style="font-size:20px">' + (rep.mw ? rep.mw.toFixed(1) : '\u2014') + '</div><div class="ss">kDa</div></div>'
+    + '<div class="st"><div class="sl">Site</div><div class="sv" style="font-size:20px;color:var(--br)' + (sitesDisplay.length > 8 ? ';font-size:14px' : '') + '">' + sitesDisplay + '</div></div>'
     + '<div class="st"><div class="sl">Coverage</div><div class="sv" style="font-size:20px">' + (rep.cov ? rep.cov.toFixed(0) + '%' : '\u2014') + '</div></div>'
     + '<div class="st"><div class="sl">Peptides</div><div class="sv" style="font-size:20px">' + (rep.pep != null ? rep.pep : '\u2014') + '</div></div>'
     + '<div class="st"><div class="sl">Experiments</div><div class="sv" style="font-size:20px">' + entries.length + '</div></div>'
@@ -2189,6 +2198,7 @@ function drawVolcano() {
       y: -Math.log10(td.pval),
       gene: p.gene || p.uid,
       uid: p.uid,
+      motif: p.motif || '',
       ratio: td.ratio,
       pval: td.pval,
       sig: td.ratio <= thr && td.pval <= 0.05,
@@ -2217,7 +2227,8 @@ function drawVolcano() {
           legend: {display: false},
           tooltip: {callbacks: {label: function(ctx) {
             var d = pts[ctx.dataIndex];
-            return [d.gene + ': log\u2082(ratio)=' + d.x.toFixed(3), '\u2212log\u2081\u2080(p)=' + d.y.toFixed(2) + ' | ratio=' + d.ratio.toFixed(3) + ' | p=' + d.pval.toExponential(2)];
+            var label = d.motif ? (d.gene + ' \u00b7 ' + d.motif) : d.gene;
+            return [label + ': log\u2082(ratio)=' + d.x.toFixed(3), '\u2212log\u2081\u2080(p)=' + d.y.toFixed(2) + ' | ratio=' + d.ratio.toFixed(3) + ' | p=' + d.pval.toExponential(2)];
           }}},
           title: {display: true, text: (exp.filename || exp.name) + ' \u00b7 ' + cpd + ' vs Vehicle', font:{size:13}}
         },
