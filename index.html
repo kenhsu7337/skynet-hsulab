@@ -756,9 +756,12 @@ function parseRows(rows) {
   var mfC = findCol(H,'Molecular Function');
   // Site-level exports (PeptideIsoforms): position, peptide sequence, modifications
   var pepC = findCol(H,'Annotated Sequence','Peptide Sequence');
+  // "Position in Protein" (clean integer) preferred over "Positions in Master Proteins" (range like [1-12])
   var posC = findCol(H,'Position in Protein','Positions in Master Proteins');
+  // Site calc needs the per-peptide "Modifications" column (contains SuTEx tokens like "1xSuTExY [Y8]")
+  var siteModC = findCol(H,'Modifications','Modification Name','Modifications in Master Proteins');
+  // Display-only mods column
   var modC = findCol(H,'Modifications in Master Proteins','Modifications','Modification Name');
-  var aaC  = findCol(H,'Target Amino Acid');
 
   var proteins = [];
   for (var r = 0; r < rows.length; r++) {
@@ -769,54 +772,46 @@ function parseRows(rows) {
     var nd = parseName(row[dC]);
     if (!nd.name) nd.name = acc;  // fallback to UniProt ID
 
-    // Capture peptide sequence and modifications for site calculation
-    var pepSeq = pepC ? String(row[pepC] || '').trim() : '';
-    var mods   = modC ? String(row[modC] || '').trim() : '';
+    // Capture peptide sequence and modifications
+    var pepSeq   = pepC ? String(row[pepC] || '').trim() : '';
+    var mods     = modC ? String(row[modC] || '').trim() : '';
+    var siteMods = siteModC ? String(row[siteModC] || '').trim() : '';
 
-    // Derive binding site: site_pos = protein_start_pos + probe_offset_in_peptide - 1
-    // "Positions in Master Proteins": "P09211 [1]" or "1" or "P09211 [1]; P09212 [4]"
-    // "Annotated Sequence": e.g. "VPILGK[+272]FETLSYLCGR" — bracketed residue is the probe site
+    // Binding site: site_in_protein = position_in_protein + probe_pos_in_peptide - 1
+    //   position_in_protein : "Position in Protein" column, a clean integer (e.g. 209)
+    //   probe_pos_in_peptide: from the SuTEx token in "Modifications", e.g. "1xSuTExY [Y8]" -> 8
+    // Example: ABHD10 pos 209, SuTEx [Y7] -> 209 + 7 - 1 = 215
+    var proteinStartPos = null;
     var posRaw = posC !== null ? String(row[posC] || '').trim() : '';
-    var motif = '';
-    var dispPos = '';
     if (posRaw) {
-      // Extract protein start position (first number after optional accession)
-      var pm = posRaw.match(/([A-Z][A-Z0-9]+)\s*\[(\d+)\]/i);
-      var proteinStartPos = null;
-      if (pm) {
-        proteinStartPos = parseInt(pm[2]);
-      } else {
-        var pnum = posRaw.match(/^(\d+)/);
+      var pm = posRaw.match(/\[(\d+)\s*-/);            // range form "[209-223]"
+      if (pm) proteinStartPos = parseInt(pm[1]);
+      if (proteinStartPos === null) {
+        var pm2 = posRaw.match(/\[(\d+)\]/);           // single "[1]"
+        if (pm2) proteinStartPos = parseInt(pm2[1]);
+      }
+      if (proteinStartPos === null) {
+        var pnum = posRaw.match(/^(\d+)/);             // plain integer "209"
         if (pnum) proteinStartPos = parseInt(pnum[1]);
       }
+    }
 
-      if (proteinStartPos !== null) {
-        // Find probe offset within the peptide from annotated sequence
-        // Format: "...K[+272]ETL..." — count residues (letters) before the bracket
-        var probeOffsetInPeptide = 0;
-        if (pepSeq) {
-          var stripped = pepSeq.replace(/^[^A-Z]*/,''); // remove leading decorators
-          // Walk the sequence counting amino acid letters until we hit a modification bracket
-          var lettersBeforeBracket = stripped.replace(/\[.*?\]/g, function(match, offset, str) {
-            // Check if this bracket contains a large mass shift (probe modification, not e.g. oxidation)
-            var mass = parseFloat(match.replace(/[^0-9.\-]/g,''));
-            if (Math.abs(mass) > 100) {
-              // Count only letters before this position
-              var before = str.substring(0, offset).replace(/[^A-Za-z]/g,'');
-              probeOffsetInPeptide = before.length;
-            }
-            return match;
-          });
-        }
-
-        var sitePos = proteinStartPos + probeOffsetInPeptide - 1;
-        // For the display name use the start pos (matches what PD already shows in the name col)
-        dispPos = String(proteinStartPos);
-        nd.name = acc + ' [' + dispPos + ']';
+    var motif = '';
+    var probeAA = '';
+    if (proteinStartPos !== null && siteMods) {
+      // Match the probe token: SuTExY [Y8], SuTExK [K6], or generic Probe [A123]
+      var sm = siteMods.match(/SuTEx[A-Za-z]?\s*\[([A-Z])(\d+)\]/i);
+      if (!sm) sm = siteMods.match(/SuTEx[^\[]*\[([A-Z])(\d+)\]/i);
+      if (sm) {
+        probeAA = sm[1].toUpperCase();
+        var pepPos = parseInt(sm[2]);
+        var sitePos = proteinStartPos + pepPos - 1;
         var gene = String(row[gC] || '').trim() || acc;
         motif = gene + '_' + sitePos;
       }
     }
+    // Display name in the "P09211 [1]" style using protein start position
+    if (proteinStartPos !== null) nd.name = acc + ' [' + proteinStartPos + ']';
 
     var tmt = {}, minR = null;
     for (var c = 0; c < cpds.length; c++) {
@@ -831,7 +826,7 @@ function parseRows(rows) {
       pep: si(row[pC]), psm: si(row[sC]), cat: String(row[mC] || '').trim(),
       bp: String(row[bC]  || '').trim(), cc: String(row[ccC] || '').trim(),
       mf: String(row[mfC] || '').trim(), tmt: tmt, minR: minR, ctrl: ctrl,
-      pep_seq: pepSeq, mods: mods, motif: motif
+      pep_seq: pepSeq, mods: (mods || siteMods), motif: motif
     });
   }
   proteins.sort(function(a,b) { return (a.minR||999) - (b.minR||999); });
