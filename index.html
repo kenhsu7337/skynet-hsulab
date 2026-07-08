@@ -107,6 +107,7 @@ td{padding:9px 12px;font-size:13px;border-bottom:1px solid #F8F7F3;vertical-alig
       <button class="tab"     id="tab-anlys">&#x1F4CA; Analysis</button>
       <button class="tab"     id="tab-usrs">&#x1F465; Users</button>
     </div>
+    <button id="globalBackBtn" onclick="goBack()" style="display:none;font-size:12px;color:var(--br);background:none;border:1px solid var(--bo);border-radius:6px;cursor:pointer;flex-shrink:0;padding:3px 10px;margin-left:4px;font-weight:600"></button>
     <button id="resetBtn" style="font-size:12px;color:var(--fa);background:none;border:none;cursor:pointer;flex-shrink:0;padding:0 4px">&#x27F3; Reset</button>
   <div id="nav-user-area" style="display:flex;align-items:center;gap:8px;margin-left:8px;flex-shrink:0;border-left:1px solid var(--bo);padding-left:12px"><button onclick="openFeedback()" style="background:none;border:1px solid var(--bo);border-radius:6px;padding:3px 10px;font-size:12px;color:var(--mu);cursor:pointer;margin-right:8px">&#x2753; Help / Feedback</button><span id="db-count-badge" style="font-size:10px;color:var(--fa);margin-right:4px"></span><span id="nav-user" style="font-size:12px;color:var(--mu);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span><button onclick="sbLogout()" style="font-size:11px;background:none;border:1px solid var(--bo);border-radius:6px;padding:3px 9px;cursor:pointer;color:var(--mu)">Sign out</button></div>
   </div>
@@ -208,12 +209,10 @@ td{padding:9px 12px;font-size:13px;border-bottom:1px solid #F8F7F3;vertical-alig
   </div>
 
   <div id="page-exp" class="pg">
-    <button id="backToExpsBtn" style="font-size:12px;color:var(--mu);background:none;border:none;cursor:pointer;margin-bottom:1rem">&larr; Experiments</button>
     <div id="ed"></div>
   </div>
 
   <div id="page-prot" class="pg">
-    <button id="backToQryBtn" style="font-size:12px;color:var(--mu);background:none;border:none;cursor:pointer;margin-bottom:1rem">&larr; Query proteins</button>
     <div id="pd"></div>
   </div>
 
@@ -574,7 +573,17 @@ function loadChart(cb) {
 
 // ── Navigation ────────────────────────────────────────────────────────────────
 
-function go(pageId) {
+var _navHistory = [];
+var _currentPage = null;
+
+function go(pageId, skipHistory) {
+  // Push current page onto history stack (unless this is an init or explicit skip)
+  if (_currentPage && _currentPage !== pageId && !skipHistory) {
+    _navHistory.push(_currentPage);
+    if (_navHistory.length > 20) _navHistory.shift(); // cap stack
+  }
+  _currentPage = pageId;
+
   var pages = document.querySelectorAll('.pg');
   for (var i = 0; i < pages.length; i++) pages[i].classList.remove('on');
   var tabs = document.querySelectorAll('.tab');
@@ -588,6 +597,8 @@ function go(pageId) {
   var tb = document.getElementById(tabMap[pageId]);
   if (tb) tb.classList.add('on');
 
+  updateBackBtn();
+
   if (pageId === 'dash') renderDash();
   if (pageId === 'qry') { renderQueryFilters(); doQuery(); }
   if (pageId === 'exps') renderExpList();
@@ -595,6 +606,30 @@ function go(pageId) {
   if (pageId === 'prot') renderProtDetail();
   if (pageId === 'anlys') { initVolcano(); initHeatmap(); initVenn(); }
   if (pageId === 'usrs') renderUsers();
+}
+
+function goBack() {
+  if (!_navHistory.length) return;
+  var prev = _navHistory.pop();
+  _currentPage = prev;
+  go(prev, true);
+}
+
+var PAGE_LABELS = {
+  dash: 'Dashboard', up: 'Upload', qry: 'Query', exps: 'Experiments',
+  exp: 'Experiment', prot: 'Protein', anlys: 'Analysis', usrs: 'Users'
+};
+
+function updateBackBtn() {
+  var btn = document.getElementById('globalBackBtn');
+  if (!btn) return;
+  if (_navHistory.length === 0) {
+    btn.style.display = 'none';
+  } else {
+    var prevLabel = PAGE_LABELS[_navHistory[_navHistory.length - 1]] || 'Back';
+    btn.textContent = '\u2190 ' + prevLabel;
+    btn.style.display = '';
+  }
 }
 
 // ── Launch ────────────────────────────────────────────────────────────────────
@@ -2442,8 +2477,6 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('cancelUpBtn').addEventListener('click', function() { go('exps'); });
 
   // Back buttons
-  document.getElementById('backToExpsBtn').addEventListener('click', function() { go('exps'); });
-  document.getElementById('backToQryBtn').addEventListener('click', function() { go('qry'); });
 
   // Experiments page
   document.getElementById('expsUpBtn').addEventListener('click', function() { go('up'); });
