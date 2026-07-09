@@ -229,7 +229,7 @@ td{padding:9px 12px;font-size:13px;border-bottom:1px solid #F8F7F3;vertical-alig
           <div><label class="lb">Compound</label><select id="vc" class="fc" onchange="dvp()"><option value="">Select&hellip;</option></select></div>
         </div>
         <div style="display:flex;gap:8px;margin-bottom:8px;align-items:flex-end">
-          <div style="flex:1"><label class="lb">Ratio threshold</label><select id="vrt" class="fc" onchange="dvp()"><option value="0.6">&le;0.60</option><option value="0.5">&le;0.50</option><option value="0.75">&le;0.75</option></select></div>
+          <div style="flex:1"><label class="lb">Ratio threshold</label><select id="vrt" class="fc" onchange="dvp()"><option value="0.25">&le;0.25</option><option value="0.5">&le;0.50</option><option value="0.75">&le;0.75</option></select></div>
           <button class="btn bp bsm" onclick="dvp()">Draw</button>
         </div>
         <div class="vleg" style="margin-bottom:8px;font-size:11px">
@@ -2173,7 +2173,7 @@ async function populateVolcCpds() {
 function drawVolcano() {
   var expId = document.getElementById('ve').value;
   var cpd = document.getElementById('vc').value;
-  var thr = parseFloat(document.getElementById('vrt').value) || 0.6;
+  var thr = parseFloat(document.getElementById('vrt').value) || 0.25;
   var exp = experiments.filter(function(e) { return e.id === expId; })[0];
 
   if (!exp || !cpd) {
