@@ -420,6 +420,20 @@ async function ensureProteins(expId) {
   return exp;
 }
 
+// Loads proteins without touching the experiment-detail DOM — used by the Query page
+async function ensureProteinsQuiet(expId) {
+  var exp = experiments.filter(function(e){return e.id===expId;})[0];
+  if (!exp) return null;
+  if (exp.proteins && exp.proteins.length>0) return exp;
+  if (_proteinCache[expId]) { exp.proteins=_proteinCache[expId]; return exp; }
+  var r = await supa.from('proteins').select('*').eq('experiment_id',expId);
+  if (r.error||!r.data) return null;
+  var prots = r.data.map(dbP);
+  exp.proteins = await annotateProteinsFromUniprot(prots);
+  _proteinCache[expId] = exp.proteins;
+  return exp;
+}
+
 var LAB_USERS = [
   {name:"Ken Hsu",email:"ken.hsu@austin.utexas.edu"},
   {name:"Anting Chen",email:"anting.chen@austin.utexas.edu"},
@@ -1550,17 +1564,29 @@ function renderQueryFilters() {
   document.getElementById('qu2').innerHTML = userOpts;
 }
 
-function doQuery() {
+async function doQuery() {
   var q = (document.getElementById('qt').value || '').toLowerCase();
   var probe = document.getElementById('qp').value;
   var userF = document.getElementById('qu2').value;
   var rThr = parseFloat(document.getElementById('qr').value) || null;
+
+  // Ensure proteins are loaded for ALL experiments so the query searches everything,
+  // not just experiments that happen to have been opened this session.
+  var needLoad = experiments.filter(function(e){ return !e.proteins || e.proteins.length === 0; });
+  if (needLoad.length) {
+    document.getElementById('qb').innerHTML = '<tr><td colspan="8" style="text-align:center;padding:3rem;color:var(--fa)">\u23F3 Loading proteins from ' + needLoad.length + ' experiment' + (needLoad.length !== 1 ? 's' : '') + '&hellip;</td></tr>';
+    document.getElementById('qc').textContent = 'Loading\u2026';
+    for (var k = 0; k < needLoad.length; k++) {
+      await ensureProteinsQuiet(needLoad[k].id);
+    }
+  }
 
   var m = {};
   for (var i = 0; i < experiments.length; i++) {
     var exp = experiments[i];
     if (probe && exp.probe_type !== probe) continue;
     if (userF && exp.submitted_by !== userF) continue;
+    if (!exp.proteins) continue;
     for (var j = 0; j < exp.proteins.length; j++) {
       var p = exp.proteins[j];
       if (!m[p.uid]) m[p.uid] = {p:p, entries:[], best:null, bestCpd:null};
