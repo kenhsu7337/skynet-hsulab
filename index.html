@@ -1065,6 +1065,10 @@ async function doUpload() {
         bio_rep: gv('ur') || '',
         lysis: gv('uly') || '',
         compound: gv('uc') || '',
+        treat_conc:  gv('utc') || '',
+        treat_time:  gv('utt') || '',
+        treat_type:  gv('uty') || '',
+        treat_media: gv('utm') || '',
         compounds: sheet.compounds || [],
         instrument: document.getElementById('uin') ? document.getElementById('uin').value : ''
       };
