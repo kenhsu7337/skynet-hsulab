@@ -617,7 +617,7 @@ function go(pageId, skipHistory) {
   if (pageId === 'qry') { renderQueryFilters(); doQuery(); }
   if (pageId === 'exps') renderExpList();
   if (pageId === 'exp') renderExpDetail();
-  if (pageId === 'prot') renderProtDetail();
+  if (pageId === 'prot') renderProtDetail();  // async — runs independently
   if (pageId === 'anlys') { initVolcano(); initHeatmap(); initVenn(); }
   if (pageId === 'usrs') renderUsers();
 }
@@ -2009,13 +2009,24 @@ function makeVenn3(ea, eb, ec, setA, setB, setC) {
     + '</div>';
 }
 
-function renderProtDetail() {
+async function renderProtDetail() {
+  // Show loading state immediately
+  var pd = document.getElementById('pd');
+  if (pd) pd.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--fa)">&#x23F3; Loading protein data…</div>';
+
+  // Ensure proteins are loaded for ALL experiments before searching
+  for (var i = 0; i < experiments.length; i++) {
+    if (!experiments[i].proteins || !experiments[i].proteins.length) {
+      await ensureProteins(experiments[i].id);
+    }
+  }
+
   var entries = [];
   for (var i = 0; i < experiments.length; i++) {
     for (var j = 0; j < experiments[i].proteins.length; j++) {
       if (experiments[i].proteins[j].uid === activeUid) {
         entries.push({exp: experiments[i], p: experiments[i].proteins[j]});
-        break;
+        // no break — collect ALL peptide rows for this protein
       }
     }
   }
@@ -2036,27 +2047,55 @@ function renderProtDetail() {
   var cardsHtml = '';
   var canvasIds = [];
 
-  for (var i = 0; i < entries.length; i++) {
-    var entry = entries[i];
-    var exp = entry.exp;
-    var p = entry.p;
-    var tr = [exp.treat_conc, exp.treat_time, exp.treat_type, exp.treat_media].filter(Boolean).join(' \u00b7 ');
-    var cid = 'chart_' + i + '_' + Date.now();
-    canvasIds.push({id: cid, idx: i, exp: exp, p: p});
+  // Group entries by experiment, then list all peptides per exp
+  var expMap = {}; var expOrder = [];
+  entries.forEach(function(e) {
+    var eid = e.exp.id;
+    if (!expMap[eid]) { expMap[eid] = {exp: e.exp, peptides: []}; expOrder.push(eid); }
+    expMap[eid].peptides.push(e.p);
+  });
 
-    var barsHtml = '';
-    for (var c = 0; c < exp.compounds.length; c++) {
-      var cpd = exp.compounds[c];
-      var r = p.tmt[cpd] ? p.tmt[cpd].ratio : null;
-      var col = r == null ? '#ddd' : r <= 0.5 ? 'var(--br)' : r <= 0.65 ? '#7B74D8' : '#C8C8C8';
-      var w = Math.min((r != null ? r : 1) * 100, 130);
-      barsHtml += '<div style="display:flex;align-items:center;gap:7px;margin-bottom:4px">'
-        + '<span style="font-size:11px;font-family:monospace;min-width:52px;color:var(--mu)">' + cpd + '</span>'
-        + '<div class="rb"><div class="rf" style="width:' + w + '%;background:' + col + '"></div></div>'
-        + '<span style="font-size:11px;font-weight:600;color:' + col + ';min-width:38px">' + (r != null ? r.toFixed(3) : '\u2014') + '</span>'
-        + (r != null && r <= 0.6 ? '<span style="font-size:9px;color:var(--br);font-weight:700">\u25cf</span>' : '')
-        + '</div>';
-    }
+  var cardIdx = 0;
+  expOrder.forEach(function(eid) {
+    var grp = expMap[eid];
+    var exp = grp.exp;
+    var peptides = grp.peptides;
+    var tr = [exp.treat_conc, exp.treat_time, exp.treat_type, exp.treat_media].filter(Boolean).join(' \u00b7 ');
+    var cid = 'chart_' + cardIdx + '_' + Date.now();
+    canvasIds.push({id: cid, idx: cardIdx, exp: exp, p: peptides[0]});
+    cardIdx++;
+
+    // Build peptide rows table
+    var pepRowsHtml = '<table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:8px">'
+      + '<thead><tr>'
+      + '<th style="text-align:left;padding:4px 8px;color:var(--mu);font-weight:600;border-bottom:1px solid var(--bo)">Site</th>'
+      + '<th style="text-align:left;padding:4px 8px;color:var(--mu);font-weight:600;border-bottom:1px solid var(--bo)">Peptide</th>'
+      + '<th style="text-align:left;padding:4px 8px;color:var(--mu);font-weight:600;border-bottom:1px solid var(--bo)">Modifications</th>'
+      + exp.compounds.map(function(c){return '<th style="text-align:center;padding:4px 8px;color:var(--mu);font-weight:600;border-bottom:1px solid var(--bo)">' + c + '</th>';}).join('')
+      + '</tr></thead><tbody>';
+
+    peptides.forEach(function(p) {
+      var siteLabel = p.motif ? p.motif.split('_').slice(1).join('_') : '\u2014';
+      var pepLabel = p.pep_seq || '\u2014';
+      // Truncate mods — keep only probe-relevant part
+      var modsShort = (p.mods || '').replace(/\d+xTMT6plex\s*\[[^\]]*\];?/g,'').replace(/\d+xCarbamidomethyl\s*\[[^\]]*\];?/g,'').replace(/^;|;$/g,'').trim() || p.mods || '\u2014';
+      var ratCells = exp.compounds.map(function(cpd) {
+        var r = p.tmt && p.tmt[cpd] ? (typeof p.tmt[cpd]==='object' ? p.tmt[cpd].ratio : p.tmt[cpd]) : null;
+        var col = r == null ? 'var(--mu)' : r <= 0.5 ? 'var(--br)' : r <= 0.65 ? '#7B74D8' : 'var(--mu)';
+        var fw = (r != null && r <= 0.65) ? '700' : '400';
+        return '<td style="text-align:center;padding:4px 8px;font-weight:'+fw+';color:'+col+'">'
+          + (r != null ? r.toFixed(3) : '\u2014')
+          + (r != null && r <= 0.6 ? ' \u25cf' : '')
+          + '</td>';
+      }).join('');
+      pepRowsHtml += '<tr style="border-bottom:1px solid var(--bo)">'
+        + '<td style="padding:4px 8px;font-weight:600;color:var(--br);white-space:nowrap">' + siteLabel + '</td>'
+        + '<td style="padding:4px 8px;font-family:monospace;font-size:10px;color:var(--mu);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + pepLabel + '">' + pepLabel + '</td>'
+        + '<td style="padding:4px 8px;font-size:10px;color:var(--fa);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + (p.mods||'') + '">' + modsShort + '</td>'
+        + ratCells + '</tr>';
+    });
+    pepRowsHtml += '</tbody></table>'
+      + '<div style="font-size:10px;color:var(--fa);margin-top:6px">\u25cf ratio \u22640.60 = significant engagement</div>';
 
     cardsHtml += '<div class="card" style="margin-bottom:12px">'
       + '<div class="ch"><div style="display:flex;align-items:center;gap:8px">' + probeBadge(exp.probe_type)
@@ -2064,16 +2103,16 @@ function renderProtDetail() {
       + '<span style="font-size:12px;color:var(--mu)">'
       + [exp.submitted_by, exp.cell_line, exp.bio_rep ? 'Rep ' + exp.bio_rep : '', exp.instrument].filter(Boolean).join(' \u00b7 ')
       + '</span></div>'
-      + '<div style="padding:1.25rem;display:grid;grid-template-columns:240px 1fr;gap:20px;align-items:start">'
-      + '<div>'
-      + (exp.probe_label ? '<div style="font-size:12px;margin-bottom:5px"><span style="color:var(--mu)">Probe: </span>' + exp.probe_label + '</div>' : '')
-      + (exp.compound ? '<div style="font-size:12px;margin-bottom:5px"><span style="color:var(--mu)">Compound: </span>' + exp.compound + '</div>' : '')
-      + (tr ? '<div style="font-size:12px;margin-bottom:10px"><span style="color:var(--mu)">Treatment: </span>' + tr + '</div>' : '')
-      + '<div style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">TMT competition ratios</div>'
-      + barsHtml
-      + '<div style="font-size:10px;color:var(--fa);margin-top:8px">\u25cf ratio \u22640.60 = significant engagement</div>'
-      + '</div><div><canvas id="' + cid + '" height="180"></canvas></div></div></div>';
-  }
+      + '<div style="padding:1.25rem">'
+      + '<div style="display:grid;grid-template-columns:auto auto auto;gap:16px;margin-bottom:12px">'
+      + (exp.probe_label ? '<div style="font-size:12px"><span style="color:var(--mu)">Probe: </span>' + exp.probe_label + '</div>' : '')
+      + (exp.compound ? '<div style="font-size:12px"><span style="color:var(--mu)">Compound: </span>' + exp.compound + '</div>' : '')
+      + (tr ? '<div style="font-size:12px"><span style="color:var(--mu)">Treatment: </span>' + tr + '</div>' : '')
+      + '</div>'
+      + '<div style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">All peptides · ' + peptides.length + ' row' + (peptides.length!==1?'s':'') + '</div>'
+      + pepRowsHtml
+      + '</div></div>';
+  });
 
   var html = '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.25rem">'
     + '<div><h2 style="font-size:22px;font-weight:700;margin:0 0 4px">' + (rep.gene || activeUid) + '</h2>'
