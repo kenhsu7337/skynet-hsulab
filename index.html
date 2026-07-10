@@ -820,12 +820,12 @@ function parseRows(rows) {
         probeAA = sm[1].toUpperCase();
         var pepPos = parseInt(sm[2]);
         var sitePos = proteinStartPos + pepPos - 1;
-        var gene = String(row[gC] || '').trim() || acc;
-        motif = gene + '_' + sitePos;
+        // Format: UniProtID_AAmino#  e.g. P09211_Y8
+        motif = acc + '_' + probeAA + sitePos;
       }
     }
-    // Display name in the "P09211 [1]" style using protein start position
-    if (proteinStartPos !== null) nd.name = acc + ' [' + proteinStartPos + ']';
+    // Name will be filled by UniProt lookup; use acc as placeholder
+    if (!nd.name) nd.name = acc;
 
     var tmt = {}, minR = null;
     for (var c = 0; c < cpds.length; c++) {
@@ -2194,7 +2194,7 @@ async function populateVolcCpds() {
     for (var c = 0; c < cpds.length; c++) {
       vc.innerHTML += '<option value="' + cpds[c] + '">' + cpds[c] + ' vs Vehicle</option>';
     }
-    drawVolcano();
+    await drawVolcano();
   } else {
     vc.innerHTML = '<option value="">No compounds found</option>';
   }
@@ -2352,7 +2352,11 @@ async function drawHeatmap() {
       if (!lookup[p.uid][filtExps[i].id]) lookup[p.uid][filtExps[i].id] = {};
       for (var c = 0; c < filtExps[i].compounds.length; c++) {
         var cpd = filtExps[i].compounds[c];
-        lookup[p.uid][filtExps[i].id][cpd] = p.tmt[cpd] ? p.tmt[cpd].ratio : null;
+        // tmt values may be stored as {ratio:X} or just X (number)
+        var tmtVal = p.tmt && p.tmt[cpd];
+        lookup[p.uid][filtExps[i].id][cpd] = tmtVal != null
+          ? (typeof tmtVal === 'object' ? tmtVal.ratio : tmtVal)
+          : null;
       }
     }
   }
