@@ -408,7 +408,7 @@ async function ensureProteins(expId) {
   if (exp.proteins && exp.proteins.length>0) return exp;
   if (_proteinCache[expId]) { exp.proteins=_proteinCache[expId]; return exp; }
   document.getElementById('ed').innerHTML='<div style="text-align:center;padding:3rem;color:var(--fa)">&#x23F3; Loading proteins&hellip;</div>';
-  var r = await supa.from('proteins').select('*').eq('experiment_id',expId);
+  var r = await supa.from('proteins').select('*').eq('experiment_id',expId).limit(10000);
   if (r.error||!r.data) {
     document.getElementById('ed').innerHTML='<p style="color:#DC2626;padding:1rem">Failed to load: '+(r.error?r.error.message:'unknown')+'</p>';
     return null;
@@ -426,7 +426,7 @@ async function ensureProteinsQuiet(expId) {
   if (!exp) return null;
   if (exp.proteins && exp.proteins.length>0) return exp;
   if (_proteinCache[expId]) { exp.proteins=_proteinCache[expId]; return exp; }
-  var r = await supa.from('proteins').select('*').eq('experiment_id',expId);
+  var r = await supa.from('proteins').select('*').eq('experiment_id',expId).limit(10000);
   if (r.error||!r.data) return null;
   var prots = r.data.map(dbP);
   exp.proteins = await annotateProteinsFromUniprot(prots);
