@@ -1087,6 +1087,32 @@ async function doUpload() {
         instrument: document.getElementById('uin') ? document.getElementById('uin').value : ''
       };
 
+      // ── Duplicate check ──────────────────────────────────────────────
+      var dupQ = await supa.from('experiments')
+        .select('id,filename,submitted_by,created_at')
+        .eq('source_file', baseFilename)
+        .eq('probe_type',  expMeta.probe_type || '')
+        .eq('cell_line',   expMeta.cell_line  || '')
+        .eq('bio_rep',     expMeta.bio_rep    || '')
+        .eq('lcms',        expMeta.lcms       || '');
+      if (!dupQ.error && dupQ.data && dupQ.data.length > 0) {
+        var dupInfo = dupQ.data.map(function(d) {
+          var dt = new Date(d.created_at).toLocaleDateString();
+          return '  \u2022 ' + (d.submitted_by || 'Unknown') + ' on ' + dt;
+        }).join('\n');
+        var proceed = confirm(
+          '\u26A0\uFE0F Possible duplicate detected!\n\n'
+          + 'An experiment with the same file, probe, cell line, replicate, and LC-MS/MS type already exists:\n\n'
+          + dupInfo + '\n\n'
+          + 'Do you want to upload anyway?'
+        );
+        if (!proceed) {
+          if (saveBtn) { saveBtn.textContent='Upload & save'; saveBtn.disabled=false; }
+          if (fmEl) fmEl.innerHTML = '<div style="padding:8px;color:var(--mu)">Upload cancelled.</div>';
+          return;
+        }
+      }
+      // ── Save experiment ───────────────────────────────────────────────
       var expR = await supa.from('experiments').insert(expMeta).select('id,filename').single();
       if (expR.error) {
         alert('INSERT FAILED:\n' + expR.error.message + '\nCode: ' + expR.error.code);
