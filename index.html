@@ -423,6 +423,19 @@ async function ensureProteins(expId) {
   return exp;
 }
 
+// Loads proteins WITHOUT UniProt annotation — fast, for protein detail page
+async function ensureProteinsRaw(expId) {
+  var exp = experiments.filter(function(e){return e.id===expId;})[0];
+  if (!exp) return null;
+  if (exp.proteins && exp.proteins.length>0) return exp;
+  if (_proteinCache[expId]) { exp.proteins=_proteinCache[expId]; return exp; }
+  var r = await supa.from('proteins').select('*').eq('experiment_id',expId).limit(1000000);
+  if (r.error||!r.data) return null;
+  exp.proteins = r.data.map(dbP);
+  _proteinCache[expId] = exp.proteins;
+  return exp;
+}
+
 // Loads proteins without touching the experiment-detail DOM — used by the Query page
 async function ensureProteinsQuiet(expId) {
   var exp = experiments.filter(function(e){return e.id===expId;})[0];
@@ -1320,7 +1333,17 @@ async function fetchUniprotAnnotations(uids) {
       var url = 'https://rest.uniprot.org/uniprotkb/accessions?accessions='
         + batch.join(',')
         + '&fields=accession,gene_names,protein_name,organism_name,sequence&format=json&size=' + batch.length;
-      var resp = await fetch(url);
+      var controller = new AbortController();
+      var timeoutId = setTimeout(function(){controller.abort();}, 8000);
+      var resp;
+      try {
+        resp = await fetch(url, {signal: controller.signal});
+        clearTimeout(timeoutId);
+      } catch(fetchErr) {
+        clearTimeout(timeoutId);
+        console.warn('UniProt fetch timed out or failed:', fetchErr.message);
+        continue;
+      }
       if (!resp.ok) continue;
       var data = await resp.json();
       (data.results || []).forEach(function(entry) {
@@ -2016,10 +2039,12 @@ async function renderProtDetail() {
   var pd = document.getElementById('pd');
   if (pd) pd.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--fa)">&#x23F3; Loading\u2026</div>';
 
-  // Ensure proteins loaded for all experiments
+  // Load proteins for all experiments (raw, without blocking UniProt annotation)
   for (var i = 0; i < experiments.length; i++) {
     if (!experiments[i].proteins || !experiments[i].proteins.length) {
-      await ensureProteins(experiments[i].id);
+      try {
+        await ensureProteinsRaw(experiments[i].id);
+      } catch(e) { console.warn('Failed to load proteins for', experiments[i].id, e); }
     }
   }
 
