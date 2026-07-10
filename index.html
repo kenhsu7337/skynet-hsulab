@@ -2014,10 +2014,16 @@ function makeVenn3(ea, eb, ec, setA, setB, setC) {
 
 async function renderProtDetail() {
   var pd = document.getElementById('pd');
-  if (pd) pd.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--fa)">&#x23F3; Loading…</div>';
+  if (pd) pd.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--fa)">&#x23F3; Loading\u2026</div>';
+
+  // Ensure proteins loaded for all experiments
   for (var i = 0; i < experiments.length; i++) {
-    if (!experiments[i].proteins || !experiments[i].proteins.length) await ensureProteins(experiments[i].id);
+    if (!experiments[i].proteins || !experiments[i].proteins.length) {
+      await ensureProteins(experiments[i].id);
+    }
   }
+
+  // Collect all entries matching activeUid
   var entries = [];
   for (var i = 0; i < experiments.length; i++) {
     for (var j = 0; j < experiments[i].proteins.length; j++) {
@@ -2026,43 +2032,36 @@ async function renderProtDetail() {
       }
     }
   }
-  if (!entries.length) { document.getElementById('pd').innerHTML = '<p>Not found.</p>'; return; }
+  if (!entries.length) { pd.innerHTML = '<p style="padding:2rem">Protein not found.</p>'; return; }
 
   Object.values(charts).forEach(function(c) { try { c.destroy(); } catch(e) {} });
   charts = {};
 
   var rep = entries[0].p;
-  // Collect distinct binding sites across all peptide/experiment entries for this protein
+
+  // Group by experiment
+  var expMap = {}, expOrder = [];
+  entries.forEach(function(e) {
+    if (!expMap[e.exp.id]) { expMap[e.exp.id] = {exp: e.exp, peptides: []}; expOrder.push(e.exp.id); }
+    expMap[e.exp.id].peptides.push(e.p);
+  });
+
+  // Collect distinct sites
   var siteSet = {};
   entries.forEach(function(e) { if (e.p.motif) siteSet[e.p.motif] = 1; });
-  var sitesList = Object.keys(siteSet);
-  // Show just the position part (after the underscore) for compactness, joined if multiple
-  var sitesDisplay = sitesList.length
-    ? sitesList.map(function(m){ var idx = m.indexOf('_'); return idx >= 0 ? m.slice(idx+1) : m; }).join(', ')
+  var sitesDisplay = Object.keys(siteSet).length
+    ? Object.keys(siteSet).map(function(m){ var i=m.indexOf('_'); return i>=0?m.slice(i+1):m; }).join(', ')
     : '\u2014';
-  // ── Build summary table grouped by experiment ───────────────────────────
-  var expMap = {}; var expOrder = [];
-  entries.forEach(function(e) {
-    var eid = e.exp.id;
-    if (!expMap[eid]) { expMap[eid] = {exp: e.exp, peptides: []}; expOrder.push(eid); }
-    expMap[eid].peptides.push(e.p);
-  });
 
-  // Collect all unique compounds across all experiments
-  var allCpds = [];
-  var cpdsSet = {};
-  expOrder.forEach(function(eid) {
-    expMap[eid].exp.compounds.forEach(function(c) { if (!cpdsSet[c]) { cpdsSet[c]=1; allCpds.push(c); } });
-  });
-
-  var cardsHtml = '';
   var canvasIds = [];
 
+  // Build per-experiment cards
+  var cardsHtml = '';
   expOrder.forEach(function(eid) {
     var grp = expMap[eid];
     var exp = grp.exp;
     var peptides = grp.peptides;
-    var tr = [exp.treat_conc, exp.treat_time, exp.treat_type, exp.treat_media].filter(Boolean).join(' · ');
+    var tr = [exp.treat_conc, exp.treat_time, exp.treat_type, exp.treat_media].filter(Boolean).join(' \u00b7 ');
 
     // Summary table
     var pepTbl = '<table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:8px">'
@@ -2076,19 +2075,17 @@ async function renderProtDetail() {
       + '</tr></thead><tbody>';
 
     peptides.forEach(function(p) {
-      var siteLabel = p.motif ? p.motif.split('_').slice(1).join('_') : '—';
-      var pepLabel  = p.pep_seq || '—';
+      var siteLabel = p.motif ? p.motif.split('_').slice(1).join('_') : '\u2014';
+      var pepLabel  = p.pep_seq || '\u2014';
       var modsShort = (p.mods||'').replace(/\d+xTMT6plex\s*\[[^\]]*\];?/g,'')
                                    .replace(/\d+xCarbamidomethyl\s*\[[^\]]*\];?/g,'')
-                                   .replace(/^;|;$/g,'').trim() || p.mods || '—';
-      var ratCells  = exp.compounds.map(function(cpd) {
-        var r = p.tmt && p.tmt[cpd] ? (typeof p.tmt[cpd]==='object' ? p.tmt[cpd].ratio : p.tmt[cpd]) : null;
+                                   .replace(/^;|;$/g,'').trim() || p.mods || '\u2014';
+      var ratCells = exp.compounds.map(function(cpd) {
+        var v = p.tmt && p.tmt[cpd];
+        var r = v!=null ? (typeof v==='object' ? v.ratio : v) : null;
         var col = r==null?'var(--mu)':r<=0.5?'var(--br)':r<=0.65?'#7B74D8':'var(--mu)';
-        var fw  = (r!=null&&r<=0.65)?'700':'400';
-        return '<td style="text-align:center;padding:4px 8px;font-weight:'+fw+';color:'+col+';white-space:nowrap">'
-          + (r!=null?r.toFixed(3):'—')
-          + (r!=null&&r<=0.6?' ●':'')
-          + '</td>';
+        return '<td style="text-align:center;padding:4px 8px;font-weight:'+(r!=null&&r<=0.65?'700':'400')+';color:'+col+';white-space:nowrap">'
+          + (r!=null?r.toFixed(3):'\u2014') + (r!=null&&r<=0.6?' \u25cf':'') + '</td>';
       }).join('');
       pepTbl += '<tr style="border-bottom:1px solid #F8F7F3">'
         + '<td style="padding:4px 8px;font-weight:600;color:var(--br);white-space:nowrap">' + siteLabel + '</td>'
@@ -2096,41 +2093,68 @@ async function renderProtDetail() {
         + '<td style="padding:4px 8px;font-size:10px;color:var(--fa);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+(p.mods||'')+'">' + modsShort + '</td>'
         + ratCells + '</tr>';
     });
-    pepTbl += '</tbody></table>'
-      + '<div style="font-size:10px;color:var(--fa);margin-top:4px">● ratio ≤0.60 = significant engagement</div>';
+    pepTbl += '</tbody></table><div style="font-size:10px;color:var(--fa);margin-top:4px">\u25cf ratio \u22640.60 = significant engagement</div>';
 
-    // Compact bar charts — 3 per row
-    var chartRowHtml = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px">';
+    // Compact charts 3-per-row
+    var chartGrid = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px">';
     peptides.forEach(function(p, pi) {
       var cid = 'chart_' + eid.slice(0,6) + '_' + pi;
-      canvasIds.push({id: cid, exp: exp, p: p});
+      canvasIds.push({id:cid, exp:exp, p:p});
       var siteLabel = p.motif ? p.motif.split('_').slice(1).join('_') : (p.pep_seq||'').slice(0,12);
-      chartRowHtml += '<div style="background:#F8F7F3;border-radius:8px;padding:8px 10px">'
+      chartGrid += '<div style="background:#F8F7F3;border-radius:8px;padding:8px 10px">'
         + '<div style="font-size:10px;font-weight:700;color:var(--br);margin-bottom:4px">' + siteLabel + '</div>'
-        + '<canvas id="' + cid + '" height="120"></canvas>'
-        + '</div>';
+        + '<canvas id="' + cid + '" height="120"></canvas></div>';
     });
-    chartRowHtml += '</div>';
+    chartGrid += '</div>';
 
     cardsHtml += '<div class="card" style="margin-bottom:12px">'
       + '<div class="ch"><div style="display:flex;align-items:center;gap:8px">' + probeBadge(exp.probe_type)
       + '<span style="font-family:monospace;font-size:12px">' + (exp.filename||exp.name) + '</span></div>'
       + '<span style="font-size:12px;color:var(--mu)">'
-      + [exp.submitted_by, exp.cell_line, exp.bio_rep?'Rep '+exp.bio_rep:'', exp.instrument].filter(Boolean).join(' · ')
+      + [exp.submitted_by, exp.cell_line, exp.bio_rep?'Rep '+exp.bio_rep:'', exp.instrument].filter(Boolean).join(' \u00b7 ')
       + '</span></div>'
       + '<div style="padding:1.25rem">'
       + '<div style="display:flex;gap:16px;font-size:12px;margin-bottom:10px;flex-wrap:wrap">'
-      + (exp.probe_label ? '<span><span style="color:var(--mu)">Probe: </span>'+exp.probe_label+'</span>' : '')
-      + (exp.compound    ? '<span><span style="color:var(--mu)">Compound: </span>'+exp.compound+'</span>' : '')
-      + (tr              ? '<span><span style="color:var(--mu)">Treatment: </span>'+tr+'</span>' : '')
+      + (exp.probe_label?'<span><span style="color:var(--mu)">Probe: </span>'+exp.probe_label+'</span>':'')
+      + (exp.compound?'<span><span style="color:var(--mu)">Compound: </span>'+exp.compound+'</span>':'')
+      + (tr?'<span><span style="color:var(--mu)">Treatment: </span>'+tr+'</span>':'')
       + '</div>'
-      + '<div style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">All peptides &middot; ' + peptides.length + ' row' + (peptides.length!==1?'s':'') + '</div>'
-      + pepTbl
-      + chartRowHtml
-      + '</div></div>';
+      + '<div style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">All peptides \u00b7 ' + peptides.length + ' row'+(peptides.length!==1?'s':'')+'</div>'
+      + pepTbl + chartGrid + '</div></div>';
   });
 
-  document.getElementById('pd').innerHTML = html;
+  // Build header stats
+  var html2 = '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.25rem">'
+    + '<div><h2 style="font-size:22px;font-weight:700;margin:0 0 4px">' + (rep.gene||activeUid) + '</h2>'
+    + '<div style="font-size:13px;color:var(--mu);margin-bottom:8px">' + rep.name + '</div>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
+    + '<span class="uid">' + activeUid + '</span>'
+    + (rep.org?'<em style="font-size:12px;color:var(--mu)">'+rep.org+'</em>':'')
+    + '</div></div>'
+    + '<a href="https://www.uniprot.org/uniprot/' + activeUid + '" target="_blank" style="font-size:12px;color:var(--br);text-decoration:none;border:1px solid var(--bo);border-radius:6px;padding:5px 12px">UniProt \u2197</a>'
+    + '</div>'
+    + '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:1.25rem">'
+    + '<div class="st"><div class="sl">MW</div><div class="sv" style="font-size:20px">' + (rep.mw?rep.mw.toFixed(1):'\u2014') + '</div><div class="ss">kDa</div></div>'
+    + '<div class="st"><div class="sl">Site</div><div class="sv" style="font-size:'+(sitesDisplay.length>8?'14px':'20px')+';color:var(--br)">' + sitesDisplay + '</div></div>'
+    + '<div class="st"><div class="sl">Coverage</div><div class="sv" style="font-size:20px">' + (rep.cov?rep.cov.toFixed(0)+'%':'\u2014') + '</div></div>'
+    + '<div class="st"><div class="sl">Peptides</div><div class="sv" style="font-size:20px">' + (rep.pep!=null?rep.pep:'\u2014') + '</div></div>'
+    + '<div class="st"><div class="sl">Experiments</div><div class="sv" style="font-size:20px">' + expOrder.length + '</div></div>'
+    + '</div>'
+    + cardsHtml;
+
+  if (rep.bp && rep.bp !== 'nan') {
+    html2 += '<div class="card"><div class="ch">Functional annotation</div><div style="padding:1.25rem;display:grid;grid-template-columns:repeat(3,1fr);gap:16px">';
+    var annots = [['Biological process',rep.bp],['Cellular component',rep.cc],['Molecular function',rep.mf]];
+    for (var a=0;a<annots.length;a++) {
+      if (annots[a][1]&&annots[a][1]!=='nan') {
+        html2 += '<div><div style="font-size:11px;color:var(--fa);margin-bottom:4px;font-weight:700;text-transform:uppercase;letter-spacing:.05em">'+annots[a][0]+'</div>'
+          + '<div style="font-size:12px;color:var(--mu)">'+annots[a][1]+'</div></div>';
+      }
+    }
+    html2 += '</div></div>';
+  }
+
+  pd.innerHTML = html2;
 
   setTimeout(function() {
     if (!chartReady && !window.Chart) { loadChart(function() { chartReady=true; drawProtCharts(canvasIds); }); return; }
