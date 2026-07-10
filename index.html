@@ -2393,9 +2393,12 @@ async function drawHeatmap() {
         var cpd = filtExps[i].compounds[c];
         // tmt values may be stored as {ratio:X} or just X (number)
         var tmtVal = p.tmt && p.tmt[cpd];
-        lookup[p.uid][filtExps[i].id][cpd] = tmtVal != null
-          ? (typeof tmtVal === 'object' ? tmtVal.ratio : tmtVal)
-          : null;
+        var r = tmtVal != null ? (typeof tmtVal === 'object' ? tmtVal.ratio : tmtVal) : null;
+        // Keep best (minimum) ratio across all peptides for this protein
+        var existing = lookup[p.uid][filtExps[i].id][cpd];
+        if (r != null && (existing == null || r < existing)) {
+          lookup[p.uid][filtExps[i].id][cpd] = r;
+        }
       }
     }
   }
