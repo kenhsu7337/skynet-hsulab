@@ -407,10 +407,13 @@ async function ensureProteins(expId) {
   if (!exp) return null;
   if (exp.proteins && exp.proteins.length>0) return exp;
   if (_proteinCache[expId]) { exp.proteins=_proteinCache[expId]; return exp; }
-  document.getElementById('ed').innerHTML='<div style="text-align:center;padding:3rem;color:var(--fa)">&#x23F3; Loading proteins&hellip;</div>';
+  // Only update 'ed' DOM if we're on the experiment detail page
+  var edEl = document.getElementById('ed');
+  var onExpPage = edEl && document.getElementById('page-exp') && document.getElementById('page-exp').classList.contains('on');
+  if (onExpPage) edEl.innerHTML='<div style="text-align:center;padding:3rem;color:var(--fa)">&#x23F3; Loading proteins&hellip;</div>';
   var r = await supa.from('proteins').select('*').eq('experiment_id',expId).limit(1000000);
   if (r.error||!r.data) {
-    document.getElementById('ed').innerHTML='<p style="color:#DC2626;padding:1rem">Failed to load: '+(r.error?r.error.message:'unknown')+'</p>';
+    if (onExpPage) edEl.innerHTML='<p style="color:#DC2626;padding:1rem">Failed to load: '+(r.error?r.error.message:'unknown')+'</p>';
     return null;
   }
   var prots = r.data.map(dbP);
