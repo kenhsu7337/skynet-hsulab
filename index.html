@@ -1754,16 +1754,34 @@ function renderExpList() {
       + '<td onclick="event.stopPropagation()">' + statusHtml + '</td>'
       + '<td onclick="event.stopPropagation()" style="white-space:nowrap">'
       + '<button class="bcsv bsm" onclick="expCSV(\'' + e.id + '\')">\u2b07 CSV</button> '
-      + '<button class="btn bsm bd2" onclick="deleteExp(\'' + e.id + '\')">\xd7</button>'
+      + (isAdmin() ? '<button class="btn bsm bd2" onclick="deleteExp(\'' + e.id + '\')" title="Delete (admin only)">\xd7</button>' : '')
       + '</td></tr>';
   }
   html += '</tbody></table></div>';
   document.getElementById('el').innerHTML = html;
 }
 
+var DELETE_PASSWORD = 'HsuLab2025';  // change here to update the deletion passcode
+
 async function deleteExp(id) {
   var exp = experiments.filter(function(e) { return e.id === id; })[0];
-  if (!exp || !confirm('Delete "' + (exp.filename || exp.name) + '"?')) return;
+  if (!exp) return;
+
+  // Only admins may delete
+  if (!isAdmin()) {
+    alert('Only lab administrators can delete experiments.\n\n'
+      + 'If this dataset needs to be removed, please contact Ken Hsu\n'
+      + 'or use the Help / Feedback button.');
+    return;
+  }
+
+  // Passcode gate
+  var pw = prompt('Deletion passcode required to delete:\n' + (exp.filename || exp.name));
+  if (pw === null) return;                      // cancelled
+  if (pw !== DELETE_PASSWORD) { alert('Incorrect passcode. Deletion cancelled.'); return; }
+
+  if (!confirm('Permanently delete "' + (exp.filename || exp.name) + '"?\nThis cannot be undone.')) return;
+
   var r = await supa.from('experiments').delete().eq('id', id);
   if (r.error) { alert('Delete failed: ' + r.error.message); return; }
   experiments = experiments.filter(function(e) { return e.id !== id; });
@@ -1807,7 +1825,7 @@ async function renderExpDetail() {
     + '<div style="display:flex;gap:8px;flex-shrink:0">'
     + '<button class="bcsv" onclick="expCSV(\'' + exp.id + '\')">\u2b07 Export CSV</button>'
     + '<button class="btn bsm" onclick="activeExpId=\'' + exp.id + '\';go(\'anlys\')">\ud83c\udf0b Volcano</button>'
-    + '<button class="btn bsm bd2" onclick="if(confirm(\'Delete?\'))deleteExp(\'' + exp.id + '\')">\xd7</button>'
+    + (isAdmin() ? '<button class="btn bsm bd2" onclick="deleteExp(\'' + exp.id + '\')" title="Delete (admin only)">\xd7</button>' : '')
     + '</div></div>'
     + banner
     + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.25rem">'
@@ -1903,7 +1921,7 @@ function renderLFDetail(exp) {
     + '</div></div>'
     + '<div style="display:flex;gap:8px;flex-shrink:0">'
     + '<button class="bcsv" onclick="expCSV(&apos;' + id + '&apos;)">&#x2B07; Export CSV</button>'
-    + '<button class="btn bsm bd2" onclick="if(confirm(&apos;Delete?&apos;))deleteExp(&apos;' + id + '&apos;)">&#xD7;</button>'
+    + (isAdmin() ? '<button class="btn bsm bd2" onclick="deleteExp(&apos;' + id + '&apos;)" title="Delete (admin only)">&#xD7;</button>' : '')
     + '</div></div>'
     + misHtml
     + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1.25rem">'
