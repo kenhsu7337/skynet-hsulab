@@ -2197,7 +2197,10 @@ async function renderProtDetail() {
     + '<span class="uid">' + activeUid + '</span>'
     + (rep.org?'<em style="font-size:12px;color:var(--mu)">'+rep.org+'</em>':'')
     + '</div></div>'
+    + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
     + '<a href="https://www.uniprot.org/uniprot/' + activeUid + '" target="_blank" style="font-size:12px;color:var(--br);text-decoration:none;border:1px solid var(--bo);border-radius:6px;padding:5px 12px">UniProt \u2197</a>'
+    + '<a href="https://docking-site.vercel.app?uniprot=' + encodeURIComponent(activeUid) + '&label=' + encodeURIComponent(rep.gene || activeUid) + '&from=skynet" target="_blank" style="font-size:12px;color:#fff;text-decoration:none;background:var(--br);border:1px solid var(--br);border-radius:6px;padding:5px 12px;font-weight:600;display:inline-flex;align-items:center;gap:5px">\u26F3 Dock this protein</a>'
+    + '</div>'
     + '</div>'
     + '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:1.25rem">'
     + '<div class="st"><div class="sl">MW</div><div class="sv" style="font-size:20px">' + (rep.mw?rep.mw.toFixed(1):'\u2014') + '</div><div class="ss">kDa</div></div>'
