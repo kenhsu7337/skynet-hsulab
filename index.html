@@ -1340,6 +1340,78 @@ function toggleOtherProbe() {
 }
 
 
+// ── Docking site handoff ──────────────────────────────────────────────────────
+async function openDockingSite() {
+  var btn = document.getElementById('dockBtn');
+  if (!btn) return;
+  var uid = activeUid;
+  var gene = '';
+  try {
+    var rep = null;
+    for (var i = 0; i < experiments.length; i++) {
+      for (var j = 0; j < (experiments[i].proteins || []).length; j++) {
+        if (experiments[i].proteins[j].uid === uid) { rep = experiments[i].proteins[j]; break; }
+      }
+      if (rep) break;
+    }
+    gene = (rep && rep.gene) || uid;
+  } catch(e) { gene = uid; }
+
+  btn.textContent = '\u23F3 Looking up structure\u2026';
+  btn.disabled = true;
+
+  var pdbId = null;
+  var hasPdbLigand = false;
+  try {
+    // Query RCSB for PDB entries linked to this UniProt ID, preferring structures with ligands
+    var query = {
+      query: {
+        type: 'terminal',
+        service: 'text',
+        parameters: { attribute: 'rcsb_polymer_entity_container_identifiers.uniprot_ids', operator: 'in', value: [uid] }
+      },
+      request_options: { sort: [{ sort_by: 'rcsb_entry_info.resolution_combined', direction: 'asc' }], paginate: { start: 0, rows: 10 } },
+      return_type: 'entry'
+    };
+    var r = await fetch('https://search.rcsb.org/rcsbsearch/v2/query?json=' + encodeURIComponent(JSON.stringify(query)));
+    var d = await r.json();
+    var hits = (d.result_set || []).map(function(h) { return h.identifier; });
+
+    if (hits.length) {
+      // Check each hit for small-molecule ligands (prefer co-crystal structures)
+      for (var k = 0; k < hits.length; k++) {
+        var gq = 'query($id:String!){entry(entry_id:$id){rcsb_entry_info{resolution_combined} nonpolymer_entities{pdbx_entity_nonpoly{comp_id}}}}';
+        var gr = await fetch('https://data.rcsb.org/graphql', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: gq, variables: { id: hits[k] } })
+        });
+        var gd = await gr.json();
+        var entry = gd.data && gd.data.entry;
+        var ligands = (entry && entry.nonpolymer_entities || [])
+          .map(function(n) { return n.pdbx_entity_nonpoly && n.pdbx_entity_nonpoly.comp_id; })
+          .filter(function(c) { return c && c !== 'HOH' && c !== 'GOL' && c !== 'EDO' && c !== 'PEG' && c !== 'SO4' && c !== 'PO4' && c !== 'ACT' && c !== 'FMT' && c !== 'DMS'; });
+        if (ligands.length) { pdbId = hits[k]; hasPdbLigand = true; break; }
+        if (!pdbId) pdbId = hits[k]; // keep best-resolution hit as fallback even without ligand
+      }
+    }
+  } catch(e) {
+    // RCSB lookup failed — fall through to AlphaFold
+  }
+
+  var url = 'https://docking-site.vercel.app?';
+  if (pdbId) {
+    url += 'pdb=' + encodeURIComponent(pdbId) + '&uniprot=' + encodeURIComponent(uid);
+  } else {
+    url += 'uniprot=' + encodeURIComponent(uid);
+  }
+  url += '&label=' + encodeURIComponent(gene) + '&from=skynet';
+
+  btn.textContent = '\u26F3 Dock this protein';
+  btn.disabled = false;
+  window.open(url, '_blank');
+}
+
 // ── UniProt API lookup ────────────────────────────────────────────────────────
 var _uniprotCache = {};  // uid → {gene, name, org}
 
@@ -2199,7 +2271,7 @@ async function renderProtDetail() {
     + '</div></div>'
     + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
     + '<a href="https://www.uniprot.org/uniprot/' + activeUid + '" target="_blank" style="font-size:12px;color:var(--br);text-decoration:none;border:1px solid var(--bo);border-radius:6px;padding:5px 12px">UniProt \u2197</a>'
-    + '<a href="https://docking-site.vercel.app?uniprot=' + encodeURIComponent(activeUid) + '&label=' + encodeURIComponent(rep.gene || activeUid) + '&from=skynet" target="_blank" style="font-size:12px;color:#fff;text-decoration:none;background:var(--br);border:1px solid var(--br);border-radius:6px;padding:5px 12px;font-weight:600;display:inline-flex;align-items:center;gap:5px">\u26F3 Dock this protein</a>'
+    + '<button id="dockBtn" onclick="openDockingSite()" style="font-size:12px;color:#fff;background:var(--br);border:1px solid var(--br);border-radius:6px;padding:5px 12px;font-weight:600;display:inline-flex;align-items:center;gap:5px;cursor:pointer">\u26F3 Dock this protein</button>'
     + '</div>'
     + '</div>'
     + '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:1.25rem">'
