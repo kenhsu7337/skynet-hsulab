@@ -1456,12 +1456,16 @@ async function openDockingSite() {
     try {
       var sc = new AbortController();
       var st2 = setTimeout(function(){ sc.abort(); }, 8000);
+      // Must use a boolean group so both conditions apply to the SAME nested object
       var rcsbBody = {
-        query: { type:'terminal', service:'text', parameters:{
-          attribute:'rcsb_polymer_entity_container_identifiers.uniprot_ids',
-          operator:'in',
-          value: [uid.toUpperCase()]
-        }},
+        query: {
+          type: 'group',
+          logical_operator: 'and',
+          nodes: [
+            { type:'terminal', service:'text', parameters:{ attribute:'rcsb_polymer_entity_container_identifiers.reference_sequence_identifiers.database_accession', operator:'exact_match', value: uid.toUpperCase() }},
+            { type:'terminal', service:'text', parameters:{ attribute:'rcsb_polymer_entity_container_identifiers.reference_sequence_identifiers.database_name', operator:'exact_match', value:'UniProt' }}
+          ]
+        },
         request_options: { paginate:{ start:0, rows:50 } },
         return_type: 'entry'
       };
