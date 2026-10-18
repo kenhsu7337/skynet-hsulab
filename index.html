@@ -1435,7 +1435,7 @@ async function openDockingSite() {
 
   var entries = [];
   try {
-    // Source 1: UniProt cross-references (curated but can lag months behind new depositions)
+    // Source 1: UniProt cross-references
     var uniprotIds = [];
     try {
       var uc = new AbortController();
@@ -1445,42 +1445,49 @@ async function openDockingSite() {
         { signal: uc.signal }
       );
       clearTimeout(ut);
+      console.log('[Dock] UniProt status:', ur.status);
       var ud = await ur.json();
       (ud.uniProtKBCrossReferences || []).forEach(function(x){ if (x.database === 'PDB') uniprotIds.push(x.id); });
-    } catch(e) {}
+      console.log('[Dock] UniProt PDB refs:', uniprotIds);
+    } catch(e) { console.warn('[Dock] UniProt fetch failed:', e.message); }
 
-    // Source 2: RCSB search by UniProt ID via POST — indexes new depositions much faster than UniProt curation
-    // Uses POST (not GET) to avoid URL length limits; handles 204 No Content gracefully
+    // Source 2: RCSB search by UniProt ID via POST
     var rcsbIds = [];
     try {
       var sc = new AbortController();
       var st2 = setTimeout(function(){ sc.abort(); }, 8000);
+      var rcsbBody = {
+        query: { type:'terminal', service:'text', parameters:{
+          attribute:'rcsb_polymer_entity_container_identifiers.uniprot_ids',
+          operator:'in',
+          value: [uid.toUpperCase()]
+        }},
+        request_options: { paginate:{ start:0, rows:50 } },
+        return_type: 'entry'
+      };
+      console.log('[Dock] RCSB POST body:', JSON.stringify(rcsbBody));
       var sr = await fetch('https://search.rcsb.org/rcsbsearch/v2/query', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: { type:'terminal', service:'text', parameters:{
-            attribute:'rcsb_polymer_entity_container_identifiers.uniprot_ids',
-            operator:'in',
-            value: [uid.toUpperCase()]   // 'in' operator is case-sensitive
-          }},
-          request_options: { paginate:{ start:0, rows:50 } },
-          return_type: 'entry'
-        }),
+        body: JSON.stringify(rcsbBody),
         signal: sc.signal
       });
       clearTimeout(st2);
-      if (sr.status === 200) {   // 204 = no results (valid empty response — don't call .json())
+      console.log('[Dock] RCSB search status:', sr.status);
+      if (sr.status === 200) {
         var sd = await sr.json();
+        console.log('[Dock] RCSB result_set:', sd.result_set);
         (sd.result_set || []).forEach(function(h){ rcsbIds.push(h.identifier); });
       }
-    } catch(e) {}
+      console.log('[Dock] RCSB IDs found:', rcsbIds);
+    } catch(e) { console.warn('[Dock] RCSB search failed:', e.message); }
 
-    // Merge both sources, deduplicate, preserve order (RCSB first to surface new structures)
+    // Merge both sources, deduplicate
     var seen = {}, pdbRefs = [];
     rcsbIds.concat(uniprotIds).forEach(function(id){ if (!seen[id]){ seen[id]=1; pdbRefs.push(id); } });
+    console.log('[Dock] Final merged PDB list:', pdbRefs);
 
-    // Step 2: Fetch resolution + ligands + title for each via RCSB GraphQL (up to 50)
+    // Fetch resolution + ligands + title for each via RCSB GraphQL
     var gq = 'query($id:String!){entry(entry_id:$id){struct{title} rcsb_entry_info{resolution_combined} nonpolymer_entities{pdbx_entity_nonpoly{comp_id name}}}}';
     for (var k = 0; k < Math.min(pdbRefs.length, 50); k++) {
       try {
@@ -1495,21 +1502,16 @@ async function openDockingSite() {
         clearTimeout(gt2);
         var gd = await gr.json();
         var entry = gd.data && gd.data.entry;
-        if (!entry) continue;
+        if (!entry) { console.warn('[Dock] No entry data for', pdbRefs[k]); continue; }
         var res = (entry.rcsb_entry_info && entry.rcsb_entry_info.resolution_combined && entry.rcsb_entry_info.resolution_combined[0]) || 99;
         var ligands = (entry.nonpolymer_entities || [])
           .map(function(n){ return n.pdbx_entity_nonpoly && n.pdbx_entity_nonpoly.comp_id; })
           .filter(function(c){ return c && !DOCK_EXCLUDE[c]; });
-        entries.push({
-          id: pdbRefs[k],
-          title: (entry.struct && entry.struct.title) || '',
-          res: res,
-          ligands: ligands,
-          hasLigand: ligands.length > 0
-        });
-      } catch(e) { /* skip */ }
+        console.log('[Dock]', pdbRefs[k], '| res:', res, '| ligands:', ligands);
+        entries.push({ id: pdbRefs[k], title: (entry.struct && entry.struct.title) || '', res: res, ligands: ligands, hasLigand: ligands.length > 0 });
+      } catch(e) { console.warn('[Dock] GraphQL failed for', pdbRefs[k], e.message); }
     }
-  } catch(e) { /* fall through — show modal with empty list and AlphaFold option */ }
+  } catch(e) { console.warn('[Dock] Outer catch:', e.message); }
 
   btn.textContent = '\u26F3 Dock this protein';
   btn.disabled = false;
