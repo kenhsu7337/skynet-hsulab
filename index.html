@@ -1435,31 +1435,53 @@ async function openDockingSite() {
 
   var entries = [];
   try {
-    // Step 1: Get PDB cross-references from UniProt
-    var controller = new AbortController();
-    var timer = setTimeout(function(){ controller.abort(); }, 8000);
-    var r = await fetch(
-      'https://rest.uniprot.org/uniprotkb/' + encodeURIComponent(uid) + '?fields=xref_pdb&format=json',
-      { signal: controller.signal }
-    );
-    clearTimeout(timer);
-    var d = await r.json();
-    var pdbRefs = [];
-    (d.uniProtKBCrossReferences || []).forEach(function(x){ if (x.database === 'PDB') pdbRefs.push(x.id); });
+    // Source 1: UniProt cross-references (curated but can lag months behind new depositions)
+    var uniprotIds = [];
+    try {
+      var uc = new AbortController();
+      var ut = setTimeout(function(){ uc.abort(); }, 8000);
+      var ur = await fetch(
+        'https://rest.uniprot.org/uniprotkb/' + encodeURIComponent(uid) + '?fields=xref_pdb&format=json',
+        { signal: uc.signal }
+      );
+      clearTimeout(ut);
+      var ud = await ur.json();
+      (ud.uniProtKBCrossReferences || []).forEach(function(x){ if (x.database === 'PDB') uniprotIds.push(x.id); });
+    } catch(e) {}
 
-    // Step 2: Fetch resolution + ligands + title for each via RCSB GraphQL (up to 30)
+    // Source 2: RCSB search by UniProt ID — indexes new depositions much faster than UniProt curation
+    var rcsbIds = [];
+    try {
+      var sq = JSON.stringify({
+        query: { type:'terminal', service:'text', parameters:{ attribute:'rcsb_polymer_entity_container_identifiers.uniprot_ids', operator:'in', value:[uid] } },
+        request_options: { paginate:{ start:0, rows:50 } },
+        return_type: 'entry'
+      });
+      var sc = new AbortController();
+      var st = setTimeout(function(){ sc.abort(); }, 8000);
+      var sr = await fetch('https://search.rcsb.org/rcsbsearch/v2/query?json=' + encodeURIComponent(sq), { signal: sc.signal });
+      clearTimeout(st);
+      var sd = await sr.json();
+      (sd.result_set || []).forEach(function(h){ rcsbIds.push(h.identifier); });
+    } catch(e) {}
+
+    // Merge both sources, deduplicate, preserve order (RCSB first to surface new structures)
+    var seen = {}, pdbRefs = [];
+    rcsbIds.concat(uniprotIds).forEach(function(id){ if (!seen[id]){ seen[id]=1; pdbRefs.push(id); } });
+
+    // Step 2: Fetch resolution + ligands + title for each via RCSB GraphQL (up to 50)
     var gq = 'query($id:String!){entry(entry_id:$id){struct{title} rcsb_entry_info{resolution_combined} nonpolymer_entities{pdbx_entity_nonpoly{comp_id name}}}}';
-    for (var k = 0; k < Math.min(pdbRefs.length, 30); k++) {
+    for (var k = 0; k < Math.min(pdbRefs.length, 50); k++) {
       try {
         var gc = new AbortController();
-        var gt = setTimeout(function(){ gc.abort(); }, 5000);
+        var gt2 = setTimeout(function(){ gc.abort(); }, 5000);
         var gr = await fetch('https://data.rcsb.org/graphql', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ query: gq, variables: { id: pdbRefs[k] } }),
           signal: gc.signal
         });
-        clearTimeout(gt);
+        clearTimeout(gt2);
         var gd = await gr.json();
         var entry = gd.data && gd.data.entry;
         if (!entry) continue;
