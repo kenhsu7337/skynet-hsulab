@@ -1341,62 +1341,77 @@ function toggleOtherProbe() {
 
 
 // ── Docking site handoff ──────────────────────────────────────────────────────
+// Solvents/salts to ignore when scoring a PDB entry for ligand quality
+var DOCK_EXCLUDE = {HOH:1,GOL:1,EDO:1,PEG:1,SO4:1,PO4:1,ACT:1,FMT:1,DMS:1,MPD:1,BME:1,DTT:1,TRS:1,MES:1,EPE:1,IMD:1,CIT:1,TAR:1,PGE:1,MRD:1};
+
 async function openDockingSite() {
   var btn = document.getElementById('dockBtn');
   if (!btn) return;
   var uid = activeUid;
-  var gene = '';
-  try {
-    var rep = null;
-    for (var i = 0; i < experiments.length; i++) {
-      for (var j = 0; j < (experiments[i].proteins || []).length; j++) {
-        if (experiments[i].proteins[j].uid === uid) { rep = experiments[i].proteins[j]; break; }
-      }
-      if (rep) break;
-    }
-    gene = (rep && rep.gene) || uid;
-  } catch(e) { gene = uid; }
 
-  btn.textContent = '\u23F3 Looking up structure\u2026';
+  // Get gene name from already-loaded protein data
+  var gene = uid;
+  try {
+    outer: for (var i = 0; i < experiments.length; i++) {
+      for (var j = 0; j < (experiments[i].proteins || []).length; j++) {
+        if (experiments[i].proteins[j].uid === uid) { gene = experiments[i].proteins[j].gene || uid; break outer; }
+      }
+    }
+  } catch(e) {}
+
+  btn.textContent = '\u23F3 Looking up PDB\u2026';
   btn.disabled = true;
 
   var pdbId = null;
-  var hasPdbLigand = false;
   try {
-    // Query RCSB for PDB entries linked to this UniProt ID, preferring structures with ligands
-    var query = {
-      query: {
-        type: 'terminal',
-        service: 'text',
-        parameters: { attribute: 'rcsb_polymer_entity_container_identifiers.uniprot_ids', operator: 'in', value: [uid] }
-      },
-      request_options: { sort: [{ sort_by: 'rcsb_entry_info.resolution_combined', direction: 'asc' }], paginate: { start: 0, rows: 10 } },
-      return_type: 'entry'
-    };
-    var r = await fetch('https://search.rcsb.org/rcsbsearch/v2/query?json=' + encodeURIComponent(JSON.stringify(query)));
+    // Step 1: Ask UniProt for PDB cross-references — same API Skynet already uses
+    var controller = new AbortController();
+    var timer = setTimeout(function(){ controller.abort(); }, 8000);
+    var r = await fetch(
+      'https://rest.uniprot.org/uniprotkb/' + encodeURIComponent(uid) + '?fields=xref_pdb&format=json',
+      { signal: controller.signal }
+    );
+    clearTimeout(timer);
     var d = await r.json();
-    var hits = (d.result_set || []).map(function(h) { return h.identifier; });
 
-    if (hits.length) {
-      // Check each hit for small-molecule ligands (prefer co-crystal structures)
-      for (var k = 0; k < hits.length; k++) {
-        var gq = 'query($id:String!){entry(entry_id:$id){rcsb_entry_info{resolution_combined} nonpolymer_entities{pdbx_entity_nonpoly{comp_id}}}}';
-        var gr = await fetch('https://data.rcsb.org/graphql', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: gq, variables: { id: hits[k] } })
-        });
-        var gd = await gr.json();
-        var entry = gd.data && gd.data.entry;
-        var ligands = (entry && entry.nonpolymer_entities || [])
-          .map(function(n) { return n.pdbx_entity_nonpoly && n.pdbx_entity_nonpoly.comp_id; })
-          .filter(function(c) { return c && c !== 'HOH' && c !== 'GOL' && c !== 'EDO' && c !== 'PEG' && c !== 'SO4' && c !== 'PO4' && c !== 'ACT' && c !== 'FMT' && c !== 'DMS'; });
-        if (ligands.length) { pdbId = hits[k]; hasPdbLigand = true; break; }
-        if (!pdbId) pdbId = hits[k]; // keep best-resolution hit as fallback even without ligand
+    // Extract PDB IDs from cross-references
+    var pdbRefs = [];
+    var xrefs = (d.uniProtKBCrossReferences || []);
+    xrefs.forEach(function(x) { if (x.database === 'PDB') pdbRefs.push(x.id); });
+
+    if (pdbRefs.length) {
+      // Step 2: For each PDB ID, check via RCSB GraphQL for ligands & resolution
+      // Pick the best-resolution entry that has a real small-molecule ligand
+      var bestWithLigand = null, bestResWithLigand = Infinity;
+      var bestNoLigand   = null, bestResNoLigand   = Infinity;
+
+      for (var k = 0; k < Math.min(pdbRefs.length, 20); k++) {
+        try {
+          var gq = 'query($id:String!){entry(entry_id:$id){rcsb_entry_info{resolution_combined} nonpolymer_entities{pdbx_entity_nonpoly{comp_id}}}}';
+          var gc = new AbortController();
+          var gt = setTimeout(function(){ gc.abort(); }, 5000);
+          var gr = await fetch('https://data.rcsb.org/graphql', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: gq, variables: { id: pdbRefs[k] } }),
+            signal: gc.signal
+          });
+          clearTimeout(gt);
+          var gd = await gr.json();
+          var entry = gd.data && gd.data.entry;
+          if (!entry) continue;
+          var res = (entry.rcsb_entry_info && entry.rcsb_entry_info.resolution_combined && entry.rcsb_entry_info.resolution_combined[0]) || 99;
+          var ligands = (entry.nonpolymer_entities || [])
+            .map(function(n) { return n.pdbx_entity_nonpoly && n.pdbx_entity_nonpoly.comp_id; })
+            .filter(function(c) { return c && !DOCK_EXCLUDE[c]; });
+          if (ligands.length && res < bestResWithLigand) { bestResWithLigand = res; bestWithLigand = pdbRefs[k]; }
+          else if (!ligands.length && res < bestResNoLigand) { bestResNoLigand = res; bestNoLigand = pdbRefs[k]; }
+        } catch(e) { /* skip this entry */ }
       }
+      pdbId = bestWithLigand || bestNoLigand || pdbRefs[0];
     }
   } catch(e) {
-    // RCSB lookup failed — fall through to AlphaFold
+    // UniProt or RCSB lookup failed — fall through to AlphaFold
   }
 
   var url = 'https://docking-site.vercel.app?';
