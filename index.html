@@ -1449,20 +1449,31 @@ async function openDockingSite() {
       (ud.uniProtKBCrossReferences || []).forEach(function(x){ if (x.database === 'PDB') uniprotIds.push(x.id); });
     } catch(e) {}
 
-    // Source 2: RCSB search by UniProt ID — indexes new depositions much faster than UniProt curation
+    // Source 2: RCSB search by UniProt ID via POST — indexes new depositions much faster than UniProt curation
+    // Uses POST (not GET) to avoid URL length limits; handles 204 No Content gracefully
     var rcsbIds = [];
     try {
-      var sq = JSON.stringify({
-        query: { type:'terminal', service:'text', parameters:{ attribute:'rcsb_polymer_entity_container_identifiers.uniprot_ids', operator:'in', value:[uid] } },
-        request_options: { paginate:{ start:0, rows:50 } },
-        return_type: 'entry'
-      });
       var sc = new AbortController();
-      var st = setTimeout(function(){ sc.abort(); }, 8000);
-      var sr = await fetch('https://search.rcsb.org/rcsbsearch/v2/query?json=' + encodeURIComponent(sq), { signal: sc.signal });
-      clearTimeout(st);
-      var sd = await sr.json();
-      (sd.result_set || []).forEach(function(h){ rcsbIds.push(h.identifier); });
+      var st2 = setTimeout(function(){ sc.abort(); }, 8000);
+      var sr = await fetch('https://search.rcsb.org/rcsbsearch/v2/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: { type:'terminal', service:'text', parameters:{
+            attribute:'rcsb_polymer_entity_container_identifiers.uniprot_ids',
+            operator:'in',
+            value: [uid.toUpperCase()]   // 'in' operator is case-sensitive
+          }},
+          request_options: { paginate:{ start:0, rows:50 } },
+          return_type: 'entry'
+        }),
+        signal: sc.signal
+      });
+      clearTimeout(st2);
+      if (sr.status === 200) {   // 204 = no results (valid empty response — don't call .json())
+        var sd = await sr.json();
+        (sd.result_set || []).forEach(function(h){ rcsbIds.push(h.identifier); });
+      }
     } catch(e) {}
 
     // Merge both sources, deduplicate, preserve order (RCSB first to surface new structures)
