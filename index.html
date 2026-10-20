@@ -3022,42 +3022,77 @@ async function renderUsers() {
     pendingDiv.appendChild(tbl);
   }
 
-  // Active users table
-  var html = '';
-  for (var i = 0; i < LAB_USERS.length; i++) {
-    var u = LAB_USERS[i];
-    var ue = experiments.filter(function(e) { return e.submitted_by === u.name; });
+  // Build active users from DB roles (everyone with a non-pending role)
+  var allRoles = rr && rr.data ? rr.data : [];
+  var activeRoles = allRoles.filter(function(r){ return r.role !== 'pending'; });
+
+  // Also include LAB_USERS not yet in DB (pre-existing members without accounts)
+  var dbEmails = {};
+  allRoles.forEach(function(r){ dbEmails[r.email] = true; });
+  var legacyUsers = LAB_USERS.filter(function(u){ return !dbEmails[u.email]; });
+
+  var tbody = document.getElementById('ut');
+  tbody.innerHTML = '';
+
+  // Helper to add a row
+  function addUserRow(email, name, role) {
+    var ue = experiments.filter(function(e){ return e.submitted_by === name; });
     var lastTs = 0;
     for (var j = 0; j < ue.length; j++) if (ue[j].ts > lastTs) lastTs = ue[j].ts;
-    var dbR = dbRoles[u.email];
-    var roleBadge = dbR
-      ? (dbR.role === 'admin'    ? '<span style="font-size:11px;background:#4A3FA8;color:#fff;padding:2px 8px;border-radius:10px">admin</span>'
-       : dbR.role === 'uploader' ? '<span style="font-size:11px;background:#0A5C44;color:#fff;padding:2px 8px;border-radius:10px">uploader</span>'
-       : dbR.role === 'viewer'   ? '<span style="font-size:11px;background:#A8A59E;color:#fff;padding:2px 8px;border-radius:10px">viewer</span>'
-       : '<span style="font-size:11px;background:#FDE68A;color:#92400E;padding:2px 8px;border-radius:10px">pending</span>')
+
+    var initStr = name ? name.trim().split(' ').map(function(p){ return p[0]; }).join('').toUpperCase().slice(0,2) : '?';
+
+    var roleBadge = role === 'admin'
+      ? '<span style="font-size:11px;background:#4A3FA8;color:#fff;padding:2px 8px;border-radius:10px">admin</span>'
+      : role === 'uploader'
+      ? '<span style="font-size:11px;background:#0A5C44;color:#fff;padding:2px 8px;border-radius:10px">uploader</span>'
+      : role === 'viewer'
+      ? '<span style="font-size:11px;background:#A8A59E;color:#fff;padding:2px 8px;border-radius:10px">viewer</span>'
       : '<span style="font-size:11px;color:var(--fa)">—</span>';
 
-    // Role change dropdown for admins
-    var roleControl = '';
-    if (isAdmin() && dbR && dbR.role !== 'admin' && dbR.role !== 'pending') {
-      var uid2 = u.email.replace(/[^a-zA-Z0-9]/g, '_');
-      roleControl = '<select id="role-chg-' + uid2 + '" onchange="changeRole(' + JSON.stringify(u.email) + ',this.value)"'
-        + ' style="padding:3px 6px;font-size:11px;border:1px solid var(--bo);border-radius:6px;background:#fff;margin-left:6px">'
-        + '<option value="viewer"' + (dbR.role==='viewer'?' selected':'') + '>viewer</option>'
-        + '<option value="uploader"' + (dbR.role==='uploader'?' selected':'') + '>uploader</option>'
-        + '</select>';
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td><div class="av">' + initStr + '</div></td>'
+      + '<td style="font-weight:500">' + (name || '—') + '</td>'
+      + '<td><a href="mailto:' + email + '" style="color:var(--br);text-decoration:none;font-size:13px">' + email + '</a></td>'
+      + '<td style="font-size:13px;color:var(--mu)">' + (ue.length ? ue.length + ' exp' + (ue.length!==1?'s':'') : '<span style="color:var(--fa)">None yet</span>') + '</td>'
+      + '<td style="font-size:12px;color:var(--fa)">' + (lastTs ? dateStr(lastTs) : '—') + '</td>'
+      + '<td style="display:flex;align-items:center;gap:6px">' + roleBadge + '</td>';
+
+    // Role change dropdown for admins (non-admin, non-legacy users)
+    if (isAdmin() && role && role !== 'admin' && role !== 'pending') {
+      var td = tr.querySelector('td:last-child');
+      var sel = document.createElement('select');
+      sel.style.cssText = 'padding:3px 6px;font-size:11px;border:1px solid var(--bo);border-radius:6px;background:#fff;margin-left:4px';
+      sel.innerHTML = '<option value="viewer"' + (role==='viewer'?' selected':'') + '>viewer</option>'
+        + '<option value="uploader"' + (role==='uploader'?' selected':'') + '>uploader</option>';
+      sel.onchange = (function(e, s){ return function(){ changeRole(e, s.value); }; })(email, sel);
+      td.appendChild(sel);
     }
 
-    html += '<tr>'
-      + '<td><div class="av">' + initials(u.name) + '</div></td>'
-      + '<td style="font-weight:500">' + u.name + '</td>'
-      + '<td><a href="mailto:' + u.email + '" style="color:var(--br);text-decoration:none;font-size:13px">' + u.email + '</a></td>'
-      + '<td style="font-size:13px;color:var(--mu)">' + (ue.length ? ue.length + ' exp' + (ue.length !== 1 ? 's' : '') : '<span style="color:var(--fa)">None yet</span>') + '</td>'
-      + '<td style="font-size:12px;color:var(--fa)">' + (lastTs ? dateStr(lastTs) : '—') + '</td>'
-      + '<td>' + roleBadge + roleControl + '</td>'
-      + '</tr>';
+    tbody.appendChild(tr);
   }
-  document.getElementById('ut').innerHTML = html;
+
+  // Active DB users first (sorted: admin → uploader → viewer)
+  var roleOrder = {admin:0, uploader:1, viewer:2};
+  activeRoles.sort(function(a,b){ return (roleOrder[a.role]||9) - (roleOrder[b.role]||9); });
+  activeRoles.forEach(function(r){
+    // Get display name: from LAB_USERS list or from DB display_name
+    var labUser = LAB_USERS.filter(function(u){ return u.email === r.email; })[0];
+    var name = (labUser && labUser.name) || r.display_name || r.email.split('@')[0];
+    addUserRow(r.email, name, r.role);
+  });
+
+  // Legacy lab members (in hardcoded list but no DB account yet)
+  if (legacyUsers.length) {
+    var sep = document.createElement('tr');
+    sep.innerHTML = '<td colspan="6" style="padding:6px 12px 2px;font-size:10px;font-weight:700;color:var(--fa);letter-spacing:.05em;border-top:2px solid var(--bo)">NO ACCOUNT YET</td>';
+    tbody.appendChild(sep);
+    legacyUsers.forEach(function(u){ addUserRow(u.email, u.name, null); });
+  }
+
+  // Update header count
+  var hdrEl = document.querySelector('#page-usrs p');
+  if (hdrEl) hdrEl.textContent = 'Hsu Lab \u00b7 UT Austin \u00b7 ' + (activeRoles.length + legacyUsers.length) + ' members';
 
   // Inject pending section above table
   var pg = document.getElementById('page-usrs');
