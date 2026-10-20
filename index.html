@@ -63,9 +63,17 @@ td{padding:9px 12px;font-size:13px;border-bottom:1px solid #F8F7F3;vertical-alig
 <body>
 
 <div id="wlc" style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg)">
-  <div class="card" style="padding:2.5rem;width:380px;border-radius:16px">
+  <div class="card" style="padding:2.5rem;width:400px;border-radius:16px">
     <div style="font-size:24px;font-weight:800;margin-bottom:2px">&#x1F9EC; Skynet <span style="font-size:9px;opacity:.4">v8</span></div>
-    <div style="font-size:13px;color:var(--mu);margin-bottom:2rem">Hsu Lab &middot; UT Austin</div>
+    <div style="font-size:13px;color:var(--mu);margin-bottom:1.5rem">Hsu Lab &middot; UT Austin</div>
+
+    <!-- Tab switcher -->
+    <div style="display:flex;border-bottom:2px solid var(--bo);margin-bottom:1.5rem">
+      <button id="wlc-tab-in" onclick="wlcShowTab('in')" style="flex:1;padding:8px;background:none;border:none;border-bottom:2px solid var(--br);margin-bottom:-2px;font-weight:600;font-size:13px;color:var(--br);cursor:pointer">Sign in</button>
+      <button id="wlc-tab-up" onclick="wlcShowTab('up')" style="flex:1;padding:8px;background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;font-weight:600;font-size:13px;color:var(--mu);cursor:pointer">Create account</button>
+    </div>
+
+    <!-- Sign in -->
     <div id="sb-mode-pw">
       <div style="margin-bottom:12px">
         <label class="lb">Email</label>
@@ -78,21 +86,29 @@ td{padding:9px 12px;font-size:13px;border-bottom:1px solid #F8F7F3;vertical-alig
       </div>
       <div id="sb-err" style="color:#DC2626;font-size:12px;margin-bottom:10px;display:none"></div>
       <button id="sb-btn" class="btn bp" style="width:100%;padding:11px;font-size:14px" onclick="sbLogin()">Sign in</button>
-      <div style="text-align:center;margin-top:12px">
-        <button onclick="sbShowMagic()" style="background:none;border:none;color:var(--br);font-size:12px;cursor:pointer;text-decoration:underline">Sign in with magic link instead</button>
-      </div>
     </div>
-    <div id="sb-mode-magic" style="display:none">
+
+    <!-- Create account -->
+    <div id="sb-mode-signup" style="display:none">
+      <div style="background:var(--bl);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--bd);margin-bottom:16px;line-height:1.5">
+        &#x1F512; New accounts require approval from Ken Hsu before you can access Skynet. You&#x27;ll see a waiting screen after signing up.
+      </div>
+      <div style="margin-bottom:12px">
+        <label class="lb">Full name</label>
+        <input id="sb-signup-name" type="text" class="fc" placeholder="First Last">
+      </div>
+      <div style="margin-bottom:12px">
+        <label class="lb">UT Email</label>
+        <input id="sb-signup-email" type="email" class="fc" placeholder="name@utexas.edu">
+      </div>
       <div style="margin-bottom:16px">
-        <label class="lb">Email</label>
-        <input id="sb-magic-email" type="email" class="fc" placeholder="name@utexas.edu">
+        <label class="lb">Password <span style="font-weight:400;color:var(--fa)">(min. 6 characters)</span></label>
+        <input id="sb-signup-pass" type="password" class="fc" placeholder="Choose a password"
+          onkeydown="if(event.key===&apos;Enter&apos;)sbSignup()">
       </div>
-      <div id="sb-magic-err" style="color:#DC2626;font-size:12px;margin-bottom:10px;display:none"></div>
-      <div id="sb-magic-ok" style="color:#2E7D32;font-size:12px;margin-bottom:10px;display:none"></div>
-      <button class="btn bp" style="width:100%;padding:11px;font-size:14px" onclick="sbMagicLink()">Send magic link</button>
-      <div style="text-align:center;margin-top:12px">
-        <button onclick="sbShowPw()" style="background:none;border:none;color:var(--br);font-size:12px;cursor:pointer;text-decoration:underline">Back to password sign in</button>
-      </div>
+      <div id="sb-signup-err" style="color:#DC2626;font-size:12px;margin-bottom:10px;display:none"></div>
+      <div id="sb-signup-ok" style="color:#2E7D32;font-size:12px;margin-bottom:10px;display:none"></div>
+      <button id="sb-signup-btn" class="btn bp" style="width:100%;padding:11px;font-size:14px" onclick="sbSignup()">Create account</button>
     </div>
   </div>
 </div>
@@ -271,7 +287,7 @@ td{padding:9px 12px;font-size:13px;border-bottom:1px solid #F8F7F3;vertical-alig
   <div id="page-usrs" class="pg">
     <h2 style="font-size:20px;font-weight:700;margin:0 0 4px">Lab members</h2>
     <p style="font-size:13px;color:var(--mu);margin-bottom:1.25rem">Hsu Lab &middot; UT Austin &middot; 24 members</p>
-    <div class="card" style="overflow:hidden"><table><thead><tr><th></th><th>Name</th><th>Email</th><th>Experiments</th><th>Last upload</th></tr></thead><tbody id="ut"></tbody></table></div>
+    <div class="card" style="overflow:hidden"><table><thead><tr><th></th><th>Name</th><th>Email</th><th>Experiments</th><th>Last upload</th><th>Role</th></tr></thead><tbody id="ut"></tbody></table></div>
   </div>
 
   <div style="text-align:center;font-size:11px;color:var(--fa);padding:1.5rem 0 2rem">Skynet &middot; Hsu Lab &middot; Persistent mode &middot; IP confidential</div>
@@ -311,36 +327,74 @@ function dbP(p) {
 }
 
 // Auth UI helpers
-function sbShowPw() {
-  document.getElementById('sb-mode-pw').style.display='';
-  document.getElementById('sb-mode-magic').style.display='none';
+function wlcShowTab(tab) {
+  var isIn = tab === 'in';
+  document.getElementById('sb-mode-pw').style.display     = isIn ? '' : 'none';
+  document.getElementById('sb-mode-signup').style.display = isIn ? 'none' : '';
+  document.getElementById('wlc-tab-in').style.borderBottomColor = isIn ? 'var(--br)' : 'transparent';
+  document.getElementById('wlc-tab-in').style.color             = isIn ? 'var(--br)' : 'var(--mu)';
+  document.getElementById('wlc-tab-up').style.borderBottomColor = isIn ? 'transparent' : 'var(--br)';
+  document.getElementById('wlc-tab-up').style.color             = isIn ? 'var(--mu)' : 'var(--br)';
 }
-function sbShowMagic() {
-  document.getElementById('sb-mode-pw').style.display='none';
-  document.getElementById('sb-mode-magic').style.display='';
-}
+
 async function sbLogin() {
   var email=document.getElementById('sb-email').value.trim();
   var pass=document.getElementById('sb-pass').value;
   var errEl=document.getElementById('sb-err');
   var btn=document.getElementById('sb-btn');
-  errEl.style.display='none'; btn.textContent='Signing in...';
+  errEl.style.display='none'; btn.textContent='Signing in\u2026';
   var r = await supa.auth.signInWithPassword({email:email,password:pass});
   btn.textContent='Sign in';
   if (r.error) { errEl.textContent=r.error.message; errEl.style.display=''; }
 }
-async function sbMagicLink() {
-  var email=document.getElementById('sb-magic-email').value.trim();
-  var ok=document.getElementById('sb-magic-ok');
-  var err=document.getElementById('sb-magic-err');
-  ok.style.display='none'; err.style.display='none';
-  var r = await supa.auth.signInWithOtp({email:email, options:{emailRedirectTo:window.location.href}});
-  if (r.error) { err.textContent=r.error.message; err.style.display=''; }
-  else { ok.textContent='Magic link sent! Check your inbox.'; ok.style.display=''; }
+
+async function sbSignup() {
+  var name  = document.getElementById('sb-signup-name').value.trim();
+  var email = document.getElementById('sb-signup-email').value.trim();
+  var pass  = document.getElementById('sb-signup-pass').value;
+  var errEl = document.getElementById('sb-signup-err');
+  var okEl  = document.getElementById('sb-signup-ok');
+  var btn   = document.getElementById('sb-signup-btn');
+  errEl.style.display='none'; okEl.style.display='none';
+
+  if (!name)  { errEl.textContent='Please enter your full name.'; errEl.style.display=''; return; }
+  if (!email) { errEl.textContent='Please enter your UT email.'; errEl.style.display=''; return; }
+  if (!email.includes('@utexas.edu') && !email.includes('@austin.utexas.edu')) {
+    errEl.textContent='Please use your @utexas.edu email address.'; errEl.style.display=''; return;
+  }
+  if (pass.length < 6) { errEl.textContent='Password must be at least 6 characters.'; errEl.style.display=''; return; }
+
+  btn.textContent='Creating account\u2026'; btn.disabled=true;
+  var r = await supa.auth.signUp({
+    email: email,
+    password: pass,
+    options: { data: { full_name: name } }
+  });
+  btn.textContent='Create account'; btn.disabled=false;
+
+  if (r.error) { errEl.textContent=r.error.message; errEl.style.display=''; return; }
+
+  // Notify admin
+  try {
+    emailjs.init({publicKey: EMAILJS_KEY});
+    await emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, {
+      to_email: 'ken.hsu@austin.utexas.edu',
+      subject: 'Skynet: New access request from ' + name,
+      message: name + ' (' + email + ') has requested access to Skynet.\n\nGo to the Users tab to approve:\nhttps://skynet-hsulab.vercel.app\n\nHsu Lab',
+      reply_to: email
+    });
+  } catch(e) { console.warn('Admin notification failed:', e); }
+
+  okEl.textContent = '\u2713 Account created! Waiting for admin approval.';
+  okEl.style.display = '';
 }
+
 async function sbLogout() {
   await supa.auth.signOut();
   experiments=[]; _proteinCache={};
+  _userRole = null;
+  var ps = document.getElementById('pending-screen');
+  if (ps) ps.remove();
 }
 
 // Load experiment list from DB (metadata only — proteins loaded lazily)
@@ -688,6 +742,21 @@ function launch() {
     console.log('Auth event:', event, session ? session.user.email : 'no session');
     _session = session;
     if (session) {
+      // Notify admin when a brand new user signs up (first time SIGNED_IN via magic link)
+      if (event === 'SIGNED_IN') {
+        var isNewUser = session.user.created_at && (Date.now() - new Date(session.user.created_at).getTime()) < 30000;
+        if (isNewUser) {
+          try {
+            emailjs.init({publicKey: EMAILJS_KEY});
+            emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, {
+              to_email: 'ken.hsu@austin.utexas.edu',
+              subject: 'Skynet: New access request',
+              message: session.user.email + ' has requested access to Skynet.\n\nGo to the Users tab to approve or deny:\nhttps://skynet-hsulab.vercel.app\n\nHsu Lab',
+              reply_to: session.user.email
+            });
+          } catch(e) { console.warn('New user notification failed:', e); }
+        }
+      }
       // If arriving from an invite link, prompt to set a password
       if (event === 'SIGNED_IN' && window.location.hash.includes('type=invite')) {
         window.history.replaceState(null, '', window.location.pathname);
@@ -1240,18 +1309,45 @@ async function fetchUserRole() {
     if (r.data && r.data.role) {
       _userRole = r.data.role;
     } else {
-      // Not in roles table — default to viewer
-      _userRole = 'viewer';
+      _userRole = 'pending';
     }
   } catch(e) {
-    // Table doesn't exist yet (SQL not run) — fall back to ADMIN_EMAILS check
-    _userRole = ADMIN_EMAILS.indexOf(_session.user.email) >= 0 ? 'admin' : 'uploader';
+    _userRole = ADMIN_EMAILS.indexOf(_session.user.email) >= 0 ? 'admin' : 'pending';
+  }
+
+  if (_userRole === 'pending') {
+    showPendingScreen();
+    return;
   }
   applyRoleUI();
 }
 
+function showPendingScreen() {
+  document.getElementById('app').style.display = 'none';
+  var existing = document.getElementById('pending-screen');
+  if (existing) { existing.style.display = 'flex'; return; }
+  var div = document.createElement('div');
+  div.id = 'pending-screen';
+  div.style.cssText = 'min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg)';
+  div.innerHTML = '<div class="card" style="padding:2.5rem;width:420px;border-radius:16px;text-align:center">'
+    + '<div style="font-size:36px;margin-bottom:12px">⏳</div>'
+    + '<div style="font-size:20px;font-weight:700;margin-bottom:8px">Waiting for approval</div>'
+    + '<div style="font-size:13px;color:var(--mu);margin-bottom:1.5rem;line-height:1.6">'
+    + 'Your request to join Skynet has been received.<br>Ken Hsu will approve your access shortly.<br><br>'
+    + '<span style="font-family:monospace;font-size:12px;background:var(--bg);padding:2px 8px;border-radius:4px">' + (_session ? _session.user.email : '') + '</span>'
+    + '</div>'
+    + '<button class="btn" onclick="sbLogout()" style="width:100%">Sign out</button>'
+    + '</div>';
+  document.body.appendChild(div);
+}
+
 function applyRoleUI() {
-  // Hide Upload tab and dashboard upload button for viewers
+  // Hide pending screen if showing
+  var ps = document.getElementById('pending-screen');
+  if (ps) ps.style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+
+  // Hide Upload tab and buttons for viewers
   var upTab = document.getElementById('tab-up');
   var dashUpBtn = document.getElementById('dashUploadBtn');
   var expsUpBtn = document.getElementById('expsUpBtn');
@@ -1264,10 +1360,11 @@ function applyRoleUI() {
     if (dashUpBtn) dashUpBtn.style.display = '';
     if (expsUpBtn) expsUpBtn.style.display = '';
   }
-  // Update nav user badge
+
+  // Update nav badge
   var navUser = document.getElementById('nav-user');
   if (navUser && _session) {
-    var uname = _session.user.email.replace('@utexas.edu','').replace('@austin.utexas.edu','');
+    var uname = _session.user.email.replace('@austin.utexas.edu','').replace('@utexas.edu','');
     var badge = _userRole === 'admin'
       ? ' <span style="font-size:10px;background:#4A3FA8;color:#fff;padding:1px 6px;border-radius:8px">admin</span>'
       : _userRole === 'uploader'
@@ -2843,22 +2940,129 @@ async function drawHeatmap() {
 
 // ── Users ─────────────────────────────────────────────────────────────────────
 
-function renderUsers() {
+async function renderUsers() {
+  // Load all roles from DB (admins see all rows)
+  var dbRoles = {};
+  var pendingUsers = [];
+  if (isAdmin()) {
+    var rr = await supa.from('user_roles').select('email,role,requested_at,display_name').order('requested_at', {ascending: false});
+    if (rr.data) {
+      rr.data.forEach(function(r) {
+        dbRoles[r.email] = r;
+        if (r.role === 'pending') pendingUsers.push(r);
+      });
+    }
+  }
+
+  // Pending approval queue (admin only)
+  var pendingHtml = '';
+  if (isAdmin() && pendingUsers.length) {
+    pendingHtml = '<div style="background:#FEF3C7;border:1.5px solid #FDE68A;border-radius:10px;padding:1rem 1.25rem;margin-bottom:1.25rem">'
+      + '<div style="font-weight:700;font-size:14px;color:#92400E;margin-bottom:10px">⏳ ' + pendingUsers.length + ' pending approval</div>'
+      + '<table style="width:100%;border-collapse:collapse">'
+      + '<thead><tr>'
+      + '<th style="text-align:left;padding:6px 10px;font-size:11px;color:#92400E;border-bottom:1px solid #FDE68A">Email</th>'
+      + '<th style="text-align:left;padding:6px 10px;font-size:11px;color:#92400E;border-bottom:1px solid #FDE68A">Requested</th>'
+      + '<th style="padding:6px 10px;border-bottom:1px solid #FDE68A"></th>'
+      + '</tr></thead><tbody>';
+    pendingUsers.forEach(function(u) {
+      var uid = u.email.replace(/[^a-zA-Z0-9]/g, '_');
+      pendingHtml += '<tr>'
+        + '<td style="padding:8px 10px;font-size:13px">' + u.email + '</td>'
+        + '<td style="padding:8px 10px;font-size:12px;color:#92400E">' + (u.requested_at ? new Date(u.requested_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—') + '</td>'
+        + '<td style="padding:8px 10px;display:flex;gap:8px;align-items:center">'
+        + '<select id="role-sel-' + uid + '" style="padding:4px 8px;font-size:12px;border:1px solid #FDE68A;border-radius:6px;background:#fff">'
+        + '<option value="viewer">Viewer</option>'
+        + '<option value="uploader">Uploader</option>'
+        + '</select>'
+        + '<button class="btn bp bsm" onclick="approveUser(' + JSON.stringify(u.email) + ',document.getElementById(' + JSON.stringify('role-sel-' + uid) + ').value)">Approve</button>'
+        + '<button class="btn bsm bd2" onclick="denyUser(' + JSON.stringify(u.email) + ')">Deny</button>'
+        + '</td></tr>';
+    });
+    pendingHtml += '</tbody></table></div>';
+  }
+
+  // Active users table
   var html = '';
   for (var i = 0; i < LAB_USERS.length; i++) {
     var u = LAB_USERS[i];
     var ue = experiments.filter(function(e) { return e.submitted_by === u.name; });
     var lastTs = 0;
     for (var j = 0; j < ue.length; j++) if (ue[j].ts > lastTs) lastTs = ue[j].ts;
+    var dbR = dbRoles[u.email];
+    var roleBadge = dbR
+      ? (dbR.role === 'admin'    ? '<span style="font-size:11px;background:#4A3FA8;color:#fff;padding:2px 8px;border-radius:10px">admin</span>'
+       : dbR.role === 'uploader' ? '<span style="font-size:11px;background:#0A5C44;color:#fff;padding:2px 8px;border-radius:10px">uploader</span>'
+       : dbR.role === 'viewer'   ? '<span style="font-size:11px;background:#A8A59E;color:#fff;padding:2px 8px;border-radius:10px">viewer</span>'
+       : '<span style="font-size:11px;background:#FDE68A;color:#92400E;padding:2px 8px;border-radius:10px">pending</span>')
+      : '<span style="font-size:11px;color:var(--fa)">—</span>';
+
+    // Role change dropdown for admins
+    var roleControl = '';
+    if (isAdmin() && dbR && dbR.role !== 'admin' && dbR.role !== 'pending') {
+      var uid2 = u.email.replace(/[^a-zA-Z0-9]/g, '_');
+      roleControl = '<select id="role-chg-' + uid2 + '" onchange="changeRole(' + JSON.stringify(u.email) + ',this.value)"'
+        + ' style="padding:3px 6px;font-size:11px;border:1px solid var(--bo);border-radius:6px;background:#fff;margin-left:6px">'
+        + '<option value="viewer"' + (dbR.role==='viewer'?' selected':'') + '>viewer</option>'
+        + '<option value="uploader"' + (dbR.role==='uploader'?' selected':'') + '>uploader</option>'
+        + '</select>';
+    }
+
     html += '<tr>'
       + '<td><div class="av">' + initials(u.name) + '</div></td>'
       + '<td style="font-weight:500">' + u.name + '</td>'
       + '<td><a href="mailto:' + u.email + '" style="color:var(--br);text-decoration:none;font-size:13px">' + u.email + '</a></td>'
       + '<td style="font-size:13px;color:var(--mu)">' + (ue.length ? ue.length + ' exp' + (ue.length !== 1 ? 's' : '') : '<span style="color:var(--fa)">None yet</span>') + '</td>'
-      + '<td style="font-size:12px;color:var(--fa)">' + (lastTs ? dateStr(lastTs) : '\u2014') + '</td>'
+      + '<td style="font-size:12px;color:var(--fa)">' + (lastTs ? dateStr(lastTs) : '—') + '</td>'
+      + '<td>' + roleBadge + roleControl + '</td>'
       + '</tr>';
   }
   document.getElementById('ut').innerHTML = html;
+
+  // Inject pending section above table
+  var pg = document.getElementById('page-usrs');
+  var oldPending = document.getElementById('pending-approval-section');
+  if (oldPending) oldPending.remove();
+  if (pendingHtml) {
+    var div = document.createElement('div');
+    div.id = 'pending-approval-section';
+    div.innerHTML = pendingHtml;
+    var card = pg.querySelector('.card');
+    if (card) pg.insertBefore(div, card);
+  }
+}
+
+async function approveUser(email, role) {
+  if (!isAdmin()) return;
+  var r = await supa.from('user_roles').update({ role: role, approved_at: new Date().toISOString() }).eq('email', email);
+  if (r.error) { alert('Failed to approve: ' + r.error.message); return; }
+
+  // Send approval email via EmailJS
+  try {
+    emailjs.init({publicKey: EMAILJS_KEY});
+    await emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, {
+      to_email: email,
+      subject: 'Skynet access approved',
+      message: 'Hi,\n\nYour Skynet access has been approved with role: ' + role + '.\n\nSign in at: https://skynet-hsulab.vercel.app\n\nHsu Lab',
+      reply_to: 'ken.hsu@austin.utexas.edu'
+    });
+  } catch(e) { console.warn('Approval email failed:', e.message); }
+
+  renderUsers();
+}
+
+async function denyUser(email) {
+  if (!isAdmin()) return;
+  if (!confirm('Deny access for ' + email + '?\nThis will delete their account request.')) return;
+  await supa.from('user_roles').delete().eq('email', email);
+  renderUsers();
+}
+
+async function changeRole(email, newRole) {
+  if (!isAdmin()) return;
+  var r = await supa.from('user_roles').update({ role: newRole }).eq('email', email);
+  if (r.error) { alert('Failed to update role: ' + r.error.message); return; }
+  renderUsers();
 }
 
 // ── Email modal ───────────────────────────────────────────────────────────────
