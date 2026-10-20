@@ -2975,7 +2975,7 @@ async function renderUsers() {
         + '<option value="viewer">Viewer</option>'
         + '<option value="uploader">Uploader</option>'
         + '</select>'
-        + '<button class="btn bp bsm" onclick="approveUser(' + JSON.stringify(u.email) + ',document.getElementById(' + JSON.stringify('role-sel-' + uid) + ').value)">Approve</button>'
+        + '<button class="btn bp bsm" onclick="approveUser(' + JSON.stringify(u.email) + ',this.previousElementSibling.value,this)">Approve</button>'
         + '<button class="btn bsm bd2" onclick="denyUser(' + JSON.stringify(u.email) + ')">Deny</button>'
         + '</td></tr>';
     });
@@ -3032,10 +3032,17 @@ async function renderUsers() {
   }
 }
 
-async function approveUser(email, role) {
+async function approveUser(email, role, btn) {
   if (!isAdmin()) return;
+  if (!role) { alert('Please select a role first.'); return; }
+  if (btn) { btn.textContent = 'Approving\u2026'; btn.disabled = true; }
+
   var r = await supa.from('user_roles').update({ role: role, approved_at: new Date().toISOString() }).eq('email', email);
-  if (r.error) { alert('Failed to approve: ' + r.error.message); return; }
+  if (r.error) {
+    alert('Failed to approve: ' + r.error.message);
+    if (btn) { btn.textContent = 'Approve'; btn.disabled = false; }
+    return;
+  }
 
   // Send approval email via EmailJS
   try {
