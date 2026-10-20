@@ -705,6 +705,7 @@ function launch() {
         ? ' <span style="font-size:10px;background:#4A3FA8;color:#fff;padding:1px 6px;border-radius:8px">admin</span>' : '';
       document.getElementById('nav-user').innerHTML = uname + adminTag;
       populateDropdowns();
+      fetchUserRole();
       loadExperimentsFromDB();
     } else {
       document.getElementById('wlc').style.display='flex';
@@ -723,6 +724,7 @@ function launch() {
         + (ADMIN_EMAILS.indexOf(result.data.session.user.email)>=0
           ? ' <span style="font-size:10px;background:#4A3FA8;color:#fff;padding:1px 6px;border-radius:8px">admin</span>' : '');
       populateDropdowns();
+      fetchUserRole();
       loadExperimentsFromDB();
     }
   });
@@ -1054,6 +1056,7 @@ function updateUserEmail() {
 async function doUpload() {
   if (!supa)    { alert('DB not connected'); return; }
   if (!_session){ alert('Not logged in'); return; }
+  if (!canUpload()) { alert('You have viewer access only.\n\nContact Ken Hsu to request upload permissions.'); return; }
   if (!parsedFile) { alert('No file loaded'); return; }
   var pf = Array.isArray(parsedFile) ? parsedFile : (parsedFile.type ? [parsedFile] : null);
   if (!pf || !pf.length) { alert('Re-drop the file and try again.'); return; }
@@ -1222,16 +1225,64 @@ function expCSV(expId) {
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 
-var ADMIN_EMAILS = ['ken.hsu@austin.utexas.edu'];
+var ADMIN_EMAILS = ['ken.hsu@austin.utexas.edu']; // fallback only
+var _userRole = null; // 'admin' | 'uploader' | 'viewer' | null
 
 // EmailJS configuration
 var EMAILJS_SERVICE  = 'service_okop5ps';
 var EMAILJS_TEMPLATE = 'template_n0wts6d';
 var EMAILJS_KEY      = 'kIpANTI5lzDaQlapZ';
 
+async function fetchUserRole() {
+  if (!supa || !_session) return;
+  try {
+    var r = await supa.from('user_roles').select('role').eq('email', _session.user.email).single();
+    if (r.data && r.data.role) {
+      _userRole = r.data.role;
+    } else {
+      // Not in roles table — default to viewer
+      _userRole = 'viewer';
+    }
+  } catch(e) {
+    // Table doesn't exist yet (SQL not run) — fall back to ADMIN_EMAILS check
+    _userRole = ADMIN_EMAILS.indexOf(_session.user.email) >= 0 ? 'admin' : 'uploader';
+  }
+  applyRoleUI();
+}
+
+function applyRoleUI() {
+  // Hide Upload tab and dashboard upload button for viewers
+  var upTab = document.getElementById('tab-up');
+  var dashUpBtn = document.getElementById('dashUploadBtn');
+  var expsUpBtn = document.getElementById('expsUpBtn');
+  if (_userRole === 'viewer') {
+    if (upTab) upTab.style.display = 'none';
+    if (dashUpBtn) dashUpBtn.style.display = 'none';
+    if (expsUpBtn) expsUpBtn.style.display = 'none';
+  } else {
+    if (upTab) upTab.style.display = '';
+    if (dashUpBtn) dashUpBtn.style.display = '';
+    if (expsUpBtn) expsUpBtn.style.display = '';
+  }
+  // Update nav user badge
+  var navUser = document.getElementById('nav-user');
+  if (navUser && _session) {
+    var uname = _session.user.email.replace('@utexas.edu','').replace('@austin.utexas.edu','');
+    var badge = _userRole === 'admin'
+      ? ' <span style="font-size:10px;background:#4A3FA8;color:#fff;padding:1px 6px;border-radius:8px">admin</span>'
+      : _userRole === 'uploader'
+      ? ' <span style="font-size:10px;background:#0A5C44;color:#fff;padding:1px 6px;border-radius:8px">uploader</span>'
+      : ' <span style="font-size:10px;background:#A8A59E;color:#fff;padding:1px 6px;border-radius:8px">viewer</span>';
+    navUser.innerHTML = uname + badge;
+  }
+}
 
 function isAdmin() {
-  return _session && ADMIN_EMAILS.indexOf(_session.user.email) >= 0;
+  return _userRole === 'admin' || (_userRole === null && _session && ADMIN_EMAILS.indexOf(_session.user.email) >= 0);
+}
+
+function canUpload() {
+  return _userRole === 'admin' || _userRole === 'uploader' || (_userRole === null);
 }
 
 function isOwner(exp) {
